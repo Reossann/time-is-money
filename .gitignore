@@ -1,0 +1,12 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/.tauri/
+coverage/
+.vite/
+.env
+.env.*
+*.log
+Thumbs.db
+Desktop.ini
