@@ -1,1 +1,95 @@
-# お試しです
+# Time Is Money
+
+Windows向けのデスクトップアプリとして、PC作業中に使った時間を金額換算して見える化するための初期雛形です。
+
+現在はまだ開発の土台だけを用意しており、監視処理、データ保存、通知、自動起動、集計などの本体機能は未実装です。
+
+## 現在入っているもの
+
+- Tauri v2 + React + TypeScript + Vite の初期構成
+- Dashboard / History / Rules / Settings の最低限の画面
+- 最低限のサイドバーによる画面切り替え
+- 将来使う型定義と Zod スキーマの雛形
+- Rust 側の空モジュール構成
+- 仕様書: [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)
+
+## 未実装のもの
+
+- 前面ウィンドウ取得
+- 利用時間の自動計測
+- SQLite への保存
+- 通知
+- 自動起動
+- システムトレイ
+- ブラウザ拡張機能連携
+- 日別・週別・月別集計
+
+## 使用技術
+
+- Tauri v2
+- React
+- TypeScript
+- Vite
+- Rust
+- SQLite は将来導入予定
+- Zustand
+- Zod
+
+## 事前準備
+
+このプロジェクトを別の開発環境で始める場合は、まず次の開発環境を入れてください。
+
+- Node.js
+- npm
+- Rust
+- Cargo
+- Microsoft C++ Build Tools
+- WebView2
+- Git
+
+インストール後は、次のコマンドで確認できます。
+
+```bash
+node -v
+npm -v
+rustc --version
+cargo --version
+git --version
+```
+
+準備ができたら、リポジトリを取得して依存関係を入れます。
+
+```bash
+git clone <repository-url>
+cd <project-directory>
+npm install
+```
+
+起動時は、用途に応じて次のコマンドを使います。
+
+```bash
+npm run dev
+npm run tauri dev
+```
+
+## セットアップ
+
+```bash
+npm install
+```
+
+## 起動コマンド
+
+```bash
+npm run dev
+npm run tauri dev
+```
+
+## ビルドコマンド
+
+```bash
+npm run build
+npm run tauri build
+```
+
+詳細な設計方針と実装予定は [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md) を参照してください。
