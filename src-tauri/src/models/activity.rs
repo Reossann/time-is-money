@@ -43,3 +43,61 @@ pub struct ActiveWindowInfo {
     pub window_title: String,
     pub process_id: u32,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{ActivityCategory, ActivityRecord, MatchType};
+
+    #[test]
+    fn activity_categories_use_lowercase_json_values() {
+        for (category, expected_json) in [
+            (ActivityCategory::Productive, r#""productive""#),
+            (ActivityCategory::Waste, r#""waste""#),
+            (ActivityCategory::Neutral, r#""neutral""#),
+        ] {
+            let json = serde_json::to_string(&category).expect("category should serialize");
+            let deserialized: ActivityCategory =
+                serde_json::from_str(expected_json).expect("category should deserialize");
+
+            assert_eq!(json, expected_json);
+            assert_eq!(deserialized, category);
+        }
+    }
+
+    #[test]
+    fn match_types_use_lowercase_json_values() {
+        for (match_type, expected_json) in [
+            (MatchType::Process, r#""process""#),
+            (MatchType::Title, r#""title""#),
+            (MatchType::Domain, r#""domain""#),
+        ] {
+            let json = serde_json::to_string(&match_type).expect("match type should serialize");
+            let deserialized: MatchType =
+                serde_json::from_str(expected_json).expect("match type should deserialize");
+
+            assert_eq!(json, expected_json);
+            assert_eq!(deserialized, match_type);
+        }
+    }
+
+    #[test]
+    fn activity_record_round_trips_through_json() {
+        let original = ActivityRecord {
+            id: "activity-1".to_owned(),
+            process_name: "Code.exe".to_owned(),
+            window_title: "time-is-money".to_owned(),
+            category: ActivityCategory::Productive,
+            started_at: 1_700_000_000,
+            ended_at: Some(1_700_000_300),
+            duration_seconds: 300,
+            hourly_rate: 3_000.0,
+            calculated_cost: 250.0,
+        };
+
+        let json = serde_json::to_string(&original).expect("activity record should serialize");
+        let deserialized: ActivityRecord =
+            serde_json::from_str(&json).expect("activity record should deserialize");
+
+        assert_eq!(deserialized, original);
+    }
+}
