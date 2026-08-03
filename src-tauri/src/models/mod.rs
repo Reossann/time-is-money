@@ -4,5 +4,5 @@
 pub mod activity;
 pub mod settings;
 
-pub use activity::{ActivityCategory, ActivityRecord, ActiveWindowInfo, AppRule, MatchType};
+pub use activity::{ActiveWindowInfo, ActivityCategory, ActivityRecord, AppRule, MatchType};
 pub use settings::AppSettings;
