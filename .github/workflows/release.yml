@@ -44,3 +44,5 @@ jobs:
           releaseBody: "Automated Windows build for ${{ github.ref_name }}"
           releaseDraft: false
           prerelease: false
+          uploadPlainBinary: true
+          uploadWorkflowArtifacts: true
