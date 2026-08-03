@@ -1,4 +1,4 @@
-import { useNavigationStore } from "@/stores/useNavigationStore";
+import { useNavigationStore } from "../stores/useNavigationStore";
 
 export function useNavigation() {
   const currentPage = useNavigationStore((state) => state.currentPage);

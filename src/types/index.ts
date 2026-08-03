@@ -1,2 +1,2 @@
-export * from "@/types/activity";
-export * from "@/types/settings";
+export * from "./activity";
+export * from "./settings";

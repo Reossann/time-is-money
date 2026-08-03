@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { NavigationId } from "@/constants/navigation";
+import type { NavigationId } from "../constants/navigation";
 
 type NavigationState = {
   currentPage: NavigationId;

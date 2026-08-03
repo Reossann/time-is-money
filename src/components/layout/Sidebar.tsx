@@ -1,4 +1,7 @@
-import { NAVIGATION_ITEMS, type NavigationId } from "@/constants/navigation";
+import {
+  NAVIGATION_ITEMS,
+  type NavigationId,
+} from "../../constants/navigation";
 
 type SidebarProps = {
   currentPage: NavigationId;

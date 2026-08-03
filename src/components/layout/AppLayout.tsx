@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
-import { Sidebar } from "@/components/layout/Sidebar";
-import type { NavigationId } from "@/constants/navigation";
+import type { NavigationId } from "../../constants/navigation";
+import { Sidebar } from "./Sidebar";
 
 type AppLayoutProps = {
   currentPage: NavigationId;
