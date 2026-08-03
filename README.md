@@ -92,4 +92,28 @@ npm run build
 npm run tauri build
 ```
 
+## テスト
+
+フロントエンドのテストを1回実行します。
+
+```bash
+npm test
+```
+
+開発中にファイル変更を監視しながら実行する場合は、次のコマンドを使います。
+
+```bash
+npm run test:watch
+```
+
+フロントエンドのテストは対象コードの近くへ`*.test.ts`または`*.test.tsx`として追加します。ReactコンポーネントはReact Testing Libraryで描画し、ユーザーが確認できる役割や表示名を使って検証します。
+
+Rustのテストを実行します。
+
+```bash
+cargo test --manifest-path src-tauri/Cargo.toml --all-targets --all-features
+```
+
+Rustの単体テストは対象モジュール内へ`#[cfg(test)] mod tests`として追加します。
+
 詳細な設計方針と実装予定は [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md) を参照してください。

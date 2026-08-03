@@ -14,10 +14,20 @@
 
 自動で以下を実行します。
 
+frontend-check:
+
 - npm ci
 - npm run lint
 - npm run typecheck
+- npm test
 - npm run build
+
+rust-check:
+
+- cargo fmt --check
+- cargo clippy --all-targets --all-features -- -D warnings
+- cargo test --all-targets --all-features
+- cargo check
 
 ### Release
 
@@ -34,6 +44,5 @@
 
 将来的には以下も追加するとよいです。
 
-- Rust の `cargo test`
 - Tauri の macOS / Windows / Linux 向けビルド
 - signing / artifact upload
