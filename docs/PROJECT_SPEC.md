@@ -324,7 +324,7 @@ flowchart LR
 
 Windows で必要なもの:
 
-- Node.js
+- Node.js 24（LTS）
 - npm
 - Rust
 - Cargo
@@ -341,6 +341,8 @@ rustc --version
 cargo --version
 git --version
 ```
+
+`node -v`は`v24.x`で始まること。
 
 ## 8. 起動方法
 
