@@ -7,6 +7,8 @@
 
 ## 2. 使い方
 
+CIの`frontend-check`とReleaseの`build-windows`は、どちらもNode.js 24を使用します。
+
 ### CI
 
 - main または master へ push されたとき

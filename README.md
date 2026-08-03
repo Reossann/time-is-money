@@ -39,7 +39,7 @@ Windows向けのデスクトップアプリとして、PC作業中に使った�
 
 このプロジェクトを別の開発環境で始める場合は、まず次の開発環境を入れてください。
 
-- Node.js
+- Node.js 24（LTS）
 - npm
 - Rust
 - Cargo
@@ -56,6 +56,8 @@ rustc --version
 cargo --version
 git --version
 ```
+
+`node -v`が`v24.x`で始まることを確認してください。
 
 準備ができたら、リポジトリを取得して依存関係を入れます。
 
