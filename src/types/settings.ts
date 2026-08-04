@@ -3,4 +3,5 @@ export type AppSettings = {
   notificationThresholdMinutes: number;
   idleThresholdMinutes: number;
   notificationsEnabled: boolean;
+  autostartEnabled: boolean;
 };
