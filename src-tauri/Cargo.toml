@@ -1,6 +1,6 @@
 [package]
 name = "time-is-money"
-version = "0.1.0"
+version = "0.1.5"
 edition = "2021"
 
 [lib]
@@ -8,13 +8,13 @@ name = "time_is_money"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 tauri = { version = "2", features = [] }
-tauri-plugin-notification = "2.0"
-tokio = { version = "1", features = ["time", "rt"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-notification = "2"
 
 [dev-dependencies]
 serde_json = "1"
