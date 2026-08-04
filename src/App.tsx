@@ -19,15 +19,43 @@ export function App() {
 
   // タイマーロジック：アプリマウント時に、1秒ごとに increment を実行
   useEffect(() => {
-    const { isRunning } = useActivityStore.getState();
-    if (!isRunning) return;
+    try {
+      const state = useActivityStore.getState();
 
-    const intervalId = setInterval(() => {
-      useActivityStore.getState().increment();
-    }, 1000);
+      // ストアの状態を検証
+      if (!state || typeof state.increment !== "function") {
+        throw new Error(
+          "エラー: アクティビティストアの状態が不正です。"
+        );
+      }
 
-    // クリーンアップ：コンポーネントアンマウント時に clearInterval
-    return () => clearInterval(intervalId);
+      if (!state.isRunning) return;
+
+      const intervalId = setInterval(() => {
+        try {
+          const { increment } = useActivityStore.getState();
+          if (typeof increment !== "function") {
+            throw new Error("エラー: increment 関数が見つかりません。");
+          }
+          increment();
+        } catch (err) {
+          const errorMsg =
+            err instanceof Error
+              ? err.message
+              : "タイマーの実行中にエラーが発生しました。";
+          console.error(errorMsg);
+        }
+      }, 1000);
+
+      // クリーンアップ：コンポーネントアンマウント時に clearInterval
+      return () => clearInterval(intervalId);
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : "タイマーの初期化に失敗しました。";
+      console.error(errorMsg);
+    }
   }, []);
 
   return (
