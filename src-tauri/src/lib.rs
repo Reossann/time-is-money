@@ -10,10 +10,10 @@ pub fn run() {
             {
                 use tauri_plugin_autostart::MacosLauncher;
 
-                let _ = app.handle().plugin(tauri_plugin_autostart::init(
+                app.handle().plugin(tauri_plugin_autostart::init(
                     MacosLauncher::LaunchAgent,
-                    Some(vec!["--flag1", "--flag2"]),
-                ));
+                    None,
+                ))?;
             }
             Ok(())
         })

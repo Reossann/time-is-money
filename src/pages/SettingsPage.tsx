@@ -8,6 +8,7 @@ import {
 export function SettingsPage() {
   const [autostartEnabled, setAutostartEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // ページ読込時に現在の自動起動状態を確認
   useEffect(() => {
@@ -19,14 +20,15 @@ export function SettingsPage() {
     try {
       const enabled = await isAutostartEnabled();
       setAutostartEnabled(enabled);
-    } catch (error) {
-      console.error('自動起動状態確認失敗:', error);
+    } catch {
+      setErrorMessage('自動起動の状態を確認できませんでした。');
     }
   };
 
   // トグルが変更されたときの処理
   const handleAutostartToggle = async (enabled: boolean) => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       if (enabled) {
         await enableAutostart();
@@ -34,8 +36,8 @@ export function SettingsPage() {
         await disableAutostart();
       }
       setAutostartEnabled(enabled);
-    } catch (error) {
-      console.error('自動起動設定失敗:', error);
+    } catch {
+      setErrorMessage('自動起動の設定を変更できませんでした。');
     } finally {
       setLoading(false);
     }
@@ -55,6 +57,7 @@ export function SettingsPage() {
           />
           {loading ? '処理中...' : 'PCの起動時にアプリを自動で開く'}
         </label>
+        {errorMessage && <p role="alert">{errorMessage}</p>}
       </section>
     </main>
   );

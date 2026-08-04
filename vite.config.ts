@@ -4,6 +4,8 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   server: {
-    watch: null,
+    watch: {
+      ignored: /[/\\]src-tauri[/\\]target(?:[/\\]|$)/,
+    },
   },
 });
