@@ -5,6 +5,18 @@ pub mod services;
 
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_autostart::MacosLauncher;
+
+                app.handle().plugin(tauri_plugin_autostart::init(
+                    MacosLauncher::LaunchAgent,
+                    None,
+                ))?;
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("Tauri アプリの起動に失敗しました");
 }
