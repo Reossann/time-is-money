@@ -3,5 +3,7 @@
   "identifier": "default",
   "description": "初期雛形の最小権限キャパビリティ。",
   "windows": ["main"],
-  "permissions": []
+  "permissions": [
+      "notification:default"
+    ]
 }
