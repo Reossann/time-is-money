@@ -127,7 +127,7 @@ export function extractDomain(url: string): string {
   try {
     const urlObj = new URL(url);
     return urlObj.hostname;
-  } catch (err) {
+  } catch {
     console.error("extractDomain エラー", { url });
     return "";
   }
@@ -144,4 +144,104 @@ export function getRegisteredWebApps(): WebApp[] {
     domain: app.domain,
     url: `https://${app.domain}`,
   }));
+}
+
+/**
+ * セッションの経過時間（秒）を計算
+ * @param startedAt - セッション開始時刻（Unix timestamp in ms）
+ * @returns 経過時間（秒）
+ */
+export function calculateSessionDuration(startedAt: number): number {
+  try {
+    const now = Date.now();
+    if (startedAt > now) {
+      throw new Error(
+        `calculateSessionDuration: startedAt が未来の時刻です。受け取った値: ${startedAt}`
+      );
+    }
+
+    const durationMs = now - startedAt;
+    const durationSeconds = Math.floor(durationMs / 1000);
+
+    if (durationSeconds < 0) {
+      throw new Error(
+        `calculateSessionDuration: 経過時間が負の値です。受け取った値: ${durationSeconds}`
+      );
+    }
+
+    return durationSeconds;
+  } catch (err) {
+    const errorMsg =
+      err instanceof Error ? err.message : "セッション時間の計算に失敗しました";
+    console.error(errorMsg);
+    return 0;
+  }
+}
+
+/**
+ * ウェブアプリの変更を検出
+ * @param currentUrl - 現在のURL
+ * @param previousWebAppId - 前のウェブアプリID
+ * @returns ウェブアプリが変更されたか
+ */
+export function hasWebAppChanged(
+  currentUrl: string,
+  previousWebAppId: string | null
+): boolean {
+  try {
+    const currentWebApp = detectWebApp(currentUrl);
+
+    if (currentWebApp === null) {
+      return previousWebAppId !== null;
+    }
+
+    return currentWebApp.id !== previousWebAppId;
+  } catch {
+    console.error("hasWebAppChanged エラー", { currentUrl, previousWebAppId });
+    return false;
+  }
+}
+
+/**
+ * 利用時間をフォーマット（"HH:MM:SS" 形式）
+ * @param seconds - 秒数
+ * @returns フォーマットされた時間文字列
+ */
+export function formatSessionDuration(seconds: number): string {
+  try {
+    if (typeof seconds !== "number") {
+      throw new Error(
+        `formatSessionDuration: 入力値は数値である必要があります。受け取った型: ${typeof seconds}`
+      );
+    }
+
+    if (!Number.isFinite(seconds)) {
+      throw new Error(
+        `formatSessionDuration: 入力値は有限の数値である必要があります。受け取った値: ${seconds}`
+      );
+    }
+
+    if (seconds < 0) {
+      throw new Error(
+        `formatSessionDuration: 入力値は 0 以上である必要があります。受け取った値: ${seconds}`
+      );
+    }
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    return [
+      String(hours).padStart(2, "0"),
+      String(minutes).padStart(2, "0"),
+      String(secs).padStart(2, "0"),
+    ].join(":");
+  } catch (err) {
+    const errorMsg =
+      err instanceof Error
+        ? err.message
+        : "利用時間のフォーマットに失敗しました";
+    console.error(errorMsg);
+    return "00:00:00";
+  }
 }
