@@ -118,4 +118,8 @@ cargo test --manifest-path src-tauri/Cargo.toml --all-targets --all-features
 
 Rustの単体テストは対象モジュール内へ`#[cfg(test)] mod tests`として追加します。
 
+## Release
+
+新しいアプリバージョンの更新、検証、Pull Request、タグ作成、GitHub Release確認は、[Release手順](.github/RELEASE_STEPS.md)に従ってください。設定値の更新漏れは`npm run version:check`で確認できます。
+
 詳細な設計方針と実装予定は [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md) を参照してください。

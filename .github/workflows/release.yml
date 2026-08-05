@@ -1,7 +1,6 @@
 name: Release
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -30,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check version consistency
+        run: npm run version:check -- --tag "${{ github.ref_name }}"
+
       - name: Build frontend
         run: npm run build
 
@@ -46,3 +48,5 @@ jobs:
           prerelease: false
           uploadPlainBinary: true
           uploadWorkflowArtifacts: true
+          releaseAssetNamePattern: "[mainBinaryName]_[version]_[platform]_[arch][setup][ext]"
+          workflowArtifactNamePattern: "[mainBinaryName]_[version]_[platform]_[arch]_[bundle]"
