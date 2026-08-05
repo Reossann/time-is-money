@@ -4,31 +4,44 @@ import {
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from '@tauri-apps/plugin-autostart';
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from '@tauri-apps/plugin-notification';
+
+type NotificationFeedback = {
+  type: 'success' | 'error';
+  message: string;
+};
 
 export function SettingsPage() {
   const [autostartEnabled, setAutostartEnabled] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [autostartLoading, setAutostartLoading] = useState(false);
+  const [autostartErrorMessage, setAutostartErrorMessage] = useState<
+    string | null
+  >(null);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationFeedback, setNotificationFeedback] =
+    useState<NotificationFeedback | null>(null);
 
-  // ページ読込時に現在の自動起動状態を確認
   useEffect(() => {
-    checkAutostartStatus();
+    const checkAutostartStatus = async () => {
+      try {
+        const enabled = await isAutostartEnabled();
+        setAutostartEnabled(enabled);
+      } catch {
+        setAutostartErrorMessage('自動起動の状態を確認できませんでした。');
+      }
+    };
+
+    void checkAutostartStatus();
   }, []);
 
-  // 自動起動状態を確認する関数
-  const checkAutostartStatus = async () => {
-    try {
-      const enabled = await isAutostartEnabled();
-      setAutostartEnabled(enabled);
-    } catch {
-      setErrorMessage('自動起動の状態を確認できませんでした。');
-    }
-  };
-
-  // トグルが変更されたときの処理
   const handleAutostartToggle = async (enabled: boolean) => {
-    setLoading(true);
-    setErrorMessage(null);
+    setAutostartLoading(true);
+    setAutostartErrorMessage(null);
+
     try {
       if (enabled) {
         await enableAutostart();
@@ -37,9 +50,46 @@ export function SettingsPage() {
       }
       setAutostartEnabled(enabled);
     } catch {
-      setErrorMessage('自動起動の設定を変更できませんでした。');
+      setAutostartErrorMessage('自動起動の設定を変更できませんでした。');
     } finally {
-      setLoading(false);
+      setAutostartLoading(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    setNotificationLoading(true);
+    setNotificationFeedback(null);
+
+    try {
+      let permissionGranted = await isPermissionGranted();
+
+      if (!permissionGranted) {
+        permissionGranted = (await requestPermission()) === 'granted';
+      }
+
+      if (!permissionGranted) {
+        setNotificationFeedback({
+          type: 'error',
+          message: '通知が許可されていません。',
+        });
+        return;
+      }
+
+      sendNotification({
+        title: 'Time Is Money',
+        body: 'テスト通知です',
+      });
+      setNotificationFeedback({
+        type: 'success',
+        message: 'テスト通知を送信しました。',
+      });
+    } catch {
+      setNotificationFeedback({
+        type: 'error',
+        message: '通知を送信できませんでした。',
+      });
+    } finally {
+      setNotificationLoading(false);
     }
   };
 
@@ -52,12 +102,33 @@ export function SettingsPage() {
           <input
             type="checkbox"
             checked={autostartEnabled}
-            onChange={(e) => handleAutostartToggle(e.target.checked)}
-            disabled={loading}
+            onChange={(event) => handleAutostartToggle(event.target.checked)}
+            disabled={autostartLoading}
           />
-          {loading ? '処理中...' : 'PCの起動時にアプリを自動で開く'}
+          {autostartLoading
+            ? '処理中...'
+            : 'PCの起動時にアプリを自動で開く'}
         </label>
-        {errorMessage && <p role="alert">{errorMessage}</p>}
+        {autostartErrorMessage && (
+          <p role="alert">{autostartErrorMessage}</p>
+        )}
+      </section>
+
+      <section>
+        <h3>通知</h3>
+        <p>OSの通知機能が利用できるかテストします。</p>
+        <button
+          type="button"
+          onClick={handleTestNotification}
+          disabled={notificationLoading}
+        >
+          {notificationLoading ? '確認中...' : '通知をテスト送信'}
+        </button>
+        {notificationFeedback && (
+          <p role={notificationFeedback.type === 'error' ? 'alert' : 'status'}>
+            {notificationFeedback.message}
+          </p>
+        )}
       </section>
     </main>
   );

@@ -17,6 +17,7 @@ pub enum MatchType {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActivityRecord {
     pub id: String,
     pub process_name: String,
@@ -30,6 +31,7 @@ pub struct ActivityRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppRule {
     pub id: String,
     pub match_type: MatchType,
@@ -38,6 +40,7 @@ pub struct AppRule {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActiveWindowInfo {
     pub process_name: String,
     pub window_title: String,
@@ -46,7 +49,8 @@ pub struct ActiveWindowInfo {
 
 #[cfg(test)]
 mod tests {
-    use super::{ActivityCategory, ActivityRecord, MatchType};
+    use super::{ActiveWindowInfo, ActivityCategory, ActivityRecord, AppRule, MatchType};
+    use serde_json::json;
 
     #[test]
     fn activity_categories_use_lowercase_json_values() {
@@ -81,7 +85,7 @@ mod tests {
     }
 
     #[test]
-    fn activity_record_round_trips_through_json() {
+    fn activity_record_uses_camel_case_json_keys() {
         let original = ActivityRecord {
             id: "activity-1".to_owned(),
             process_name: "Code.exe".to_owned(),
@@ -93,11 +97,101 @@ mod tests {
             hourly_rate: 3_000.0,
             calculated_cost: 250.0,
         };
+        let expected_json = json!({
+            "id": "activity-1",
+            "processName": "Code.exe",
+            "windowTitle": "time-is-money",
+            "category": "productive",
+            "startedAt": 1_700_000_000_i64,
+            "endedAt": 1_700_000_300_i64,
+            "durationSeconds": 300,
+            "hourlyRate": 3_000.0,
+            "calculatedCost": 250.0,
+        });
 
-        let json = serde_json::to_string(&original).expect("activity record should serialize");
-        let deserialized: ActivityRecord =
-            serde_json::from_str(&json).expect("activity record should deserialize");
+        let serialized = serde_json::to_value(&original).expect("activity record should serialize");
+        let deserialized: ActivityRecord = serde_json::from_value(expected_json.clone())
+            .expect("camelCase activity record should deserialize");
 
+        assert_eq!(serialized, expected_json);
+        assert_eq!(deserialized, original);
+    }
+
+    #[test]
+    fn activity_record_accepts_null_ended_at() {
+        let original = ActivityRecord {
+            id: "activity-2".to_owned(),
+            process_name: "Terminal.exe".to_owned(),
+            window_title: "PowerShell".to_owned(),
+            category: ActivityCategory::Neutral,
+            started_at: 1_700_001_000,
+            ended_at: None,
+            duration_seconds: 0,
+            hourly_rate: 3_000.0,
+            calculated_cost: 0.0,
+        };
+        let expected_json = json!({
+            "id": "activity-2",
+            "processName": "Terminal.exe",
+            "windowTitle": "PowerShell",
+            "category": "neutral",
+            "startedAt": 1_700_001_000_i64,
+            "endedAt": null,
+            "durationSeconds": 0,
+            "hourlyRate": 3_000.0,
+            "calculatedCost": 0.0,
+        });
+
+        let serialized = serde_json::to_value(&original).expect("activity record should serialize");
+        let deserialized: ActivityRecord = serde_json::from_value(expected_json.clone())
+            .expect("activity record with null endedAt should deserialize");
+
+        assert_eq!(serialized, expected_json);
+        assert_eq!(deserialized, original);
+    }
+
+    #[test]
+    fn app_rule_uses_camel_case_json_keys() {
+        let original = AppRule {
+            id: "rule-1".to_owned(),
+            match_type: MatchType::Process,
+            match_value: "Code.exe".to_owned(),
+            category: ActivityCategory::Productive,
+        };
+        let expected_json = json!({
+            "id": "rule-1",
+            "matchType": "process",
+            "matchValue": "Code.exe",
+            "category": "productive",
+        });
+
+        let serialized = serde_json::to_value(&original).expect("app rule should serialize");
+        let deserialized: AppRule = serde_json::from_value(expected_json.clone())
+            .expect("camelCase app rule should deserialize");
+
+        assert_eq!(serialized, expected_json);
+        assert_eq!(deserialized, original);
+    }
+
+    #[test]
+    fn active_window_info_uses_camel_case_json_keys() {
+        let original = ActiveWindowInfo {
+            process_name: "Code.exe".to_owned(),
+            window_title: "time-is-money".to_owned(),
+            process_id: 4_242,
+        };
+        let expected_json = json!({
+            "processName": "Code.exe",
+            "windowTitle": "time-is-money",
+            "processId": 4_242,
+        });
+
+        let serialized =
+            serde_json::to_value(&original).expect("active window info should serialize");
+        let deserialized: ActiveWindowInfo = serde_json::from_value(expected_json.clone())
+            .expect("camelCase active window info should deserialize");
+
+        assert_eq!(serialized, expected_json);
         assert_eq!(deserialized, original);
     }
 }

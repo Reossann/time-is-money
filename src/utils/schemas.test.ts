@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { ActiveWindowInfo, ActivityRecord, AppRule } from "../types/activity";
+import type { AppSettings } from "../types/settings";
 import {
+  activeWindowInfoSchema,
   activityCategorySchema,
   activityRecordSchema,
   appRuleSchema,
@@ -17,21 +20,27 @@ const validActivityRecord = {
   durationSeconds: 300,
   hourlyRate: 3_000,
   calculatedCost: 250,
-} as const;
+} as const satisfies ActivityRecord;
 
 const validAppSettings = {
   hourlyRate: 3_000,
   notificationThresholdMinutes: 30,
   idleThresholdMinutes: 5,
   notificationsEnabled: true,
-} as const;
+} as const satisfies AppSettings;
 
 const validAppRule = {
   id: "rule-1",
   matchType: "process",
   matchValue: "Code.exe",
   category: "productive",
-} as const;
+} as const satisfies AppRule;
+
+const validActiveWindowInfo = {
+  processName: "Code.exe",
+  windowTitle: "time-is-money",
+  processId: 4_242,
+} as const satisfies ActiveWindowInfo;
 
 describe("activityRecordSchema", () => {
   it("accepts a valid activity record", () => {
@@ -59,6 +68,22 @@ describe("activityRecordSchema", () => {
       activityRecordSchema.safeParse({ ...validActivityRecord, startedAt: "now" }).success,
     ).toBe(false);
   });
+
+  it("rejects snake_case JSON keys", () => {
+    expect(
+      activityRecordSchema.safeParse({
+        id: "activity-1",
+        process_name: "Code.exe",
+        window_title: "time-is-money",
+        category: "productive",
+        started_at: 1_700_000_000,
+        ended_at: 1_700_000_300,
+        duration_seconds: 300,
+        hourly_rate: 3_000,
+        calculated_cost: 250,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("appSettingsSchema", () => {
@@ -75,6 +100,50 @@ describe("appSettingsSchema", () => {
       appSettingsSchema.safeParse({
         ...validAppSettings,
         notificationsEnabled: "yes",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects snake_case JSON keys", () => {
+    expect(
+      appSettingsSchema.safeParse({
+        hourly_rate: 3_000,
+        notification_threshold_minutes: 30,
+        idle_threshold_minutes: 5,
+        notifications_enabled: true,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("appRuleSchema", () => {
+  it("accepts a valid app rule", () => {
+    expect(appRuleSchema.safeParse(validAppRule).success).toBe(true);
+  });
+
+  it("rejects snake_case JSON keys", () => {
+    expect(
+      appRuleSchema.safeParse({
+        id: "rule-1",
+        match_type: "process",
+        match_value: "Code.exe",
+        category: "productive",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("activeWindowInfoSchema", () => {
+  it("accepts valid active window information", () => {
+    expect(activeWindowInfoSchema.safeParse(validActiveWindowInfo).success).toBe(true);
+  });
+
+  it("rejects snake_case JSON keys", () => {
+    expect(
+      activeWindowInfoSchema.safeParse({
+        process_name: "Code.exe",
+        window_title: "time-is-money",
+        process_id: 4_242,
       }).success,
     ).toBe(false);
   });
