@@ -17,45 +17,14 @@ const pageMap = {
 export function App() {
   const { currentPage, setCurrentPage } = useNavigation();
 
-  // タイマーロジック：アプリマウント時に、1秒ごとに increment を実行
   useEffect(() => {
-    try {
-      const state = useActivityStore.getState();
+    useActivityStore.getState().startMeasurement();
 
-      // ストアの状態を検証
-      if (!state || typeof state.increment !== "function") {
-        throw new Error(
-          "エラー: アクティビティストアの状態が不正です。"
-        );
-      }
+    const intervalId = window.setInterval(() => {
+      useActivityStore.getState().syncElapsed();
+    }, 1000);
 
-      if (!state.isRunning) return;
-
-      const intervalId = setInterval(() => {
-        try {
-          const { increment } = useActivityStore.getState();
-          if (typeof increment !== "function") {
-            throw new Error("エラー: increment 関数が見つかりません。");
-          }
-          increment();
-        } catch (err) {
-          const errorMsg =
-            err instanceof Error
-              ? err.message
-              : "タイマーの実行中にエラーが発生しました。";
-          console.error(errorMsg);
-        }
-      }, 1000);
-
-      // クリーンアップ：コンポーネントアンマウント時に clearInterval
-      return () => clearInterval(intervalId);
-    } catch (err) {
-      const errorMsg =
-        err instanceof Error
-          ? err.message
-          : "タイマーの初期化に失敗しました。";
-      console.error(errorMsg);
-    }
+    return () => window.clearInterval(intervalId);
   }, []);
 
   return (

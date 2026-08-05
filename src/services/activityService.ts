@@ -32,9 +32,10 @@ export function formatTime(seconds: number): string {
     );
   }
 
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+  const wholeSeconds = Math.floor(seconds);
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor((wholeSeconds % 3600) / 60);
+  const secs = wholeSeconds % 60;
 
   return [
     String(hours).padStart(2, "0"),
