@@ -119,6 +119,21 @@ fn next_buffer_capacity(current: usize) -> Option<usize> {
     (next > current).then_some(next)
 }
 
+fn initial_window_title_capacity(title_length: usize) -> Option<usize> {
+    let required_capacity = title_length.checked_add(1)?;
+    if required_capacity > MAX_UTF16_BUFFER_CAPACITY {
+        return None;
+    }
+
+    // Reserve one extra code unit beyond the required null terminator so an
+    // unchanged title is distinguishable from a buffer-filling read.
+    Some(
+        required_capacity
+            .saturating_add(1)
+            .min(MAX_UTF16_BUFFER_CAPACITY),
+    )
+}
+
 mod api {
     use super::*;
 
@@ -196,26 +211,18 @@ mod api {
     }
 
     pub(super) fn window_title(window: HWND) -> Result<String, ActiveWindowError> {
-        clear_last_error();
-
-        // SAFETY: window is the HWND returned by GetForegroundWindow.
-        let title_length = unsafe { GetWindowTextLengthW(window) };
+        let title_length = window_title_length(window)?;
         if title_length == 0 {
-            let error_code = last_error_code();
-            return if error_code == ERROR_SUCCESS.0 {
-                Ok(String::new())
-            } else {
-                Err(ActiveWindowError::new("GetWindowTextLengthW", error_code))
-            };
+            return Ok(String::new());
         }
 
-        let mut capacity = (title_length as usize).saturating_add(1);
-        if capacity > MAX_UTF16_BUFFER_CAPACITY {
+        let Some(mut capacity) = initial_window_title_capacity(title_length) else {
             return Err(ActiveWindowError::new(
                 "GetWindowTextW",
                 ERROR_INSUFFICIENT_BUFFER.0,
             ));
-        }
+        };
+        let mut retried_at_max_capacity = false;
 
         loop {
             let mut buffer = vec![0_u16; capacity];
@@ -237,14 +244,44 @@ mod api {
                 return decode_utf16("GetWindowTextW", &buffer[..copied]);
             }
 
-            let Some(next) = next_buffer_capacity(capacity) else {
-                return Err(ActiveWindowError::new(
-                    "GetWindowTextW",
-                    ERROR_INSUFFICIENT_BUFFER.0,
-                ));
-            };
-            capacity = next;
+            if let Some(next) = next_buffer_capacity(capacity) {
+                capacity = next;
+                continue;
+            }
+
+            // A copied length of capacity - 1 can mean either a complete title
+            // or truncation. At the hard limit, confirm against the latest length.
+            let latest_length = window_title_length(window)?;
+            if latest_length == copied {
+                return decode_utf16("GetWindowTextW", &buffer[..copied]);
+            }
+            if latest_length < copied && !retried_at_max_capacity {
+                retried_at_max_capacity = true;
+                continue;
+            }
+
+            return Err(ActiveWindowError::new(
+                "GetWindowTextW",
+                ERROR_INSUFFICIENT_BUFFER.0,
+            ));
         }
+    }
+
+    fn window_title_length(window: HWND) -> Result<usize, ActiveWindowError> {
+        clear_last_error();
+
+        // SAFETY: window is the HWND returned by GetForegroundWindow.
+        let title_length = unsafe { GetWindowTextLengthW(window) };
+        if title_length == 0 {
+            let error_code = last_error_code();
+            return if error_code == ERROR_SUCCESS.0 {
+                Ok(0)
+            } else {
+                Err(ActiveWindowError::new("GetWindowTextLengthW", error_code))
+            };
+        }
+
+        Ok(title_length as usize)
     }
 
     fn clear_last_error() {
@@ -375,6 +412,23 @@ mod tests {
             Some(MAX_UTF16_BUFFER_CAPACITY)
         );
         assert_eq!(next_buffer_capacity(MAX_UTF16_BUFFER_CAPACITY), None);
+    }
+
+    #[test]
+    fn reserves_window_title_headroom_up_to_the_limit() {
+        assert_eq!(initial_window_title_capacity(10), Some(12));
+        assert_eq!(
+            initial_window_title_capacity(MAX_UTF16_BUFFER_CAPACITY - 2),
+            Some(MAX_UTF16_BUFFER_CAPACITY)
+        );
+        assert_eq!(
+            initial_window_title_capacity(MAX_UTF16_BUFFER_CAPACITY - 1),
+            Some(MAX_UTF16_BUFFER_CAPACITY)
+        );
+        assert_eq!(
+            initial_window_title_capacity(MAX_UTF16_BUFFER_CAPACITY),
+            None
+        );
     }
 
     #[test]

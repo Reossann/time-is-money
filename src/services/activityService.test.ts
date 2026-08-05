@@ -54,6 +54,15 @@ describe("getActiveWindowInfo", () => {
     await expect(getActiveWindowInfo()).rejects.toThrow();
   });
 
+  it("rejects a payload outside the Rust value contract", async () => {
+    invokeMock.mockResolvedValue({
+      ...validActiveWindowInfo,
+      processId: -1,
+    });
+
+    await expect(getActiveWindowInfo()).rejects.toThrow();
+  });
+
   it("preserves an invoke failure", async () => {
     const invokeError = new Error("Command invocation failed");
     invokeMock.mockRejectedValue(invokeError);
