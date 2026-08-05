@@ -4,18 +4,20 @@ Windows向けのデスクトップアプリとして、PC作業中に使った�
 
 現在はまだ開発の土台だけを用意しており、監視処理、データ保存、通知、自動起動、集計などの本体機能は未実装です。
 
+前面ウィンドウの実行ファイル名・タイトル・PIDを1回分取得するWindows API処理とTauri Command、型検証付きフロントサービスは実装済みです。継続監視、保存、分類、Dashboard表示にはまだ接続していません。
+
 ## 現在入っているもの
 
 - Tauri v2 + React + TypeScript + Vite の初期構成
 - Dashboard / History / Rules / Settings の最低限の画面
 - 最低限のサイドバーによる画面切り替え
-- 将来使う型定義と Zod スキーマの雛形
-- Rust 側の空モジュール構成
+- Rust / TypeScript間で共有する型定義とZodスキーマ
+- Windows APIによる前面ウィンドウ情報の単発取得
+- 前面ウィンドウ取得用のTauri Commandとフロントサービス
 - 仕様書: [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)
 
 ## 未実装のもの
 
-- 前面ウィンドウ取得
 - 利用時間の自動計測
 - SQLite への保存
 - 通知
