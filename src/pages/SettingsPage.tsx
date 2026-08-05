@@ -130,6 +130,22 @@ export function SettingsPage() {
           </p>
         )}
       </section>
+
+      <section>
+        <h3>Web Tracker</h3>
+        <p>Chromeで起動しているウェブアプリの利用時間を計測し、ダッシュボードに表示します。</p>
+        <details>
+          <summary>インストール手順</summary>
+          <ol style={{ marginTop: '12px', paddingLeft: '20px' }}>
+            <li>Chrome を起動します</li>
+            <li><code>chrome://extensions</code> にアクセスします</li>
+            <li>右上の「デベロッパー モード」をONにします</li>
+            <li>「拡張機能を読み込む」をクリックします</li>
+            <li><code>extensions/webtime-tracker</code> フォルダを選択します</li>
+            <li>Chrome右上の拡張機能アイコンに「Web Tracker」が表示されたら完了です</li>
+          </ol>
+        </details>
+      </section>
     </main>
   );
 }
