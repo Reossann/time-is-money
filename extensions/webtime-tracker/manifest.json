@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Time Is Money - Web Tracker",
+  "version": "0.1.0",
+  "description": "PCで開いているウェブアプリの利用時間を自動計測します",
+  "permissions": [
+    "tabs",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Time Is Money - Web Tracker"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "icons": {
+    "16": "src/icons/icon-16.png",
+    "48": "src/icons/icon-48.png",
+    "128": "src/icons/icon-128.png"
+  }
+}
