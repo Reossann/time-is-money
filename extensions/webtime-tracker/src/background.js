@@ -41,7 +41,7 @@ async function getActiveTabUrl() {
 }
 
 /**
- * Tauri にネイティブメッセージを送信
+ * Tauri にネイティブメッセージを送信（またはモックで処理）
  * @param {string} url - ウェブアプリの URL
  */
 function sendUrlToTauri(url) {
@@ -57,10 +57,12 @@ function sendUrlToTauri(url) {
       message,
       (response) => {
         if (chrome.runtime.lastError) {
-          console.error(
-            "Tauri との通信エラー:",
+          console.warn(
+            "Native Messaging エラー (Mock データで処理):",
             chrome.runtime.lastError.message
           );
+          // Mock データで処理
+          handleMockResponse(url);
           return;
         }
 
@@ -69,7 +71,24 @@ function sendUrlToTauri(url) {
     );
   } catch (error) {
     console.error("ネイティブメッセージ送信エラー:", error);
+    // エラー時も Mock で処理
+    handleMockResponse(url);
   }
+}
+
+/**
+ * Mock データで処理（開発テスト用）
+ * @param {string} url - ウェブアプリの URL
+ */
+function handleMockResponse(url) {
+  const mockResponse = {
+    success: true,
+    message: "Mock データで処理されました",
+    url: url,
+    timestamp: Date.now(),
+  };
+
+  console.log("[Mock] Tauri シミュレーション応答:", mockResponse);
 }
 
 /**

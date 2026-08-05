@@ -9,6 +9,11 @@
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
+  "nativeMessaging": {
+    "hosts": {
+      "com.timeismoney.app": "/path/to/host"
+    }
+  },
   "app": {
     "windows": [
       {
