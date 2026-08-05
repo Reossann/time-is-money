@@ -5,9 +5,34 @@ pub mod services;
 
 use tauri_plugin_notification::NotificationExt;
 
+/**
+ * Chrome拡張機能からのウェブアプリURL情報を受け取るコマンド
+ * @param url - ウェブアプリのURL
+ * @returns 処理結果
+ */
+#[tauri::command]
+fn receive_web_app_url(url: String) -> Result<String, String> {
+    // URL の検証
+    if url.is_empty() {
+        return Err("URLが空です".to_string());
+    }
+
+    // URLの形式確認
+    match url::Url::parse(&url) {
+        Ok(_) => {
+            // ここで後に JavaScript側に通知するイベントを発火させる
+            // 現在は受け取ったURLをログに出力
+            println!("ウェブアプリURL受信: {}", url);
+            Ok(format!("URLを受け取りました: {}", url))
+        }
+        Err(e) => Err(format!("URLの解析に失敗しました: {}", e)),
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
+        .invoke_handler(tauri::generate_handler![receive_web_app_url])
         .setup(|app| {
             #[cfg(desktop)]
             {
