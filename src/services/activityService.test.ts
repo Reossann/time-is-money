@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActiveWindowInfo } from "../types/activity";
-import { getActiveWindowInfo } from "./activityService";
+import { formatTime, getActiveWindowInfo } from "./activityService";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -60,4 +60,22 @@ describe("getActiveWindowInfo", () => {
 
     await expect(getActiveWindowInfo()).rejects.toBe(invokeError);
   });
+});
+
+describe("formatTime", () => {
+  it.each([
+    [0, "00:00:00"],
+    [61, "00:01:01"],
+    [3661, "01:01:01"],
+    [1.9, "00:00:01"],
+  ])("formats %s seconds as %s", (seconds, expected) => {
+    expect(formatTime(seconds)).toBe(expected);
+  });
+
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejects invalid seconds: %s",
+    (seconds) => {
+      expect(() => formatTime(seconds)).toThrow();
+    },
+  );
 });
