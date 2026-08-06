@@ -11,6 +11,8 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 
+use services::notification_service::{pick_random_message, DEFAULT_TONE};
+
 const APP_ICON: Image<'_> = tauri::include_image!("icons/icon.png");
 
 /**
@@ -121,18 +123,7 @@ pub fn run() {
                 // TODO: 活動計測が実装されたら、固定タイマーではなく実際の通知条件に接続する。（動作確認用に5秒に変更）
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
-                // デフォルトの口調モード: スパルタ (spartan)
-                let messages = [
-                    "おい、手が止まってるぞ。時間はタダじゃないんだが？",
-                    "サボり検出！今この瞬間もハッカソンの残り時間が減っています。",
-                    "またSNS見てない？その3分があれば1機能作れたよね？",
-                    "現実逃避は終了！黙ってキーボードに手を戻しなさい！",
-                    "締め切り『やあ、僕だよ。準備はできてるかい？』",
-                ];
-
-                use rand::seq::SliceRandom;
-                let mut rng = rand::thread_rng();
-                let body = messages.choose(&mut rng).copied().unwrap_or(messages[0]);
+                let body = pick_random_message(DEFAULT_TONE);
 
                 if let Err(error) = app_handle
                     .notification()
