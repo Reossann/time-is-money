@@ -1,6 +1,21 @@
 import { create } from "zustand";
 import type { WebApp, WebAppSession, WebAppUsageStats } from "../types/activity";
 
+function createWebAppSession(webApp: WebApp, startedAt: number): WebAppSession {
+  return {
+    id: `session-${startedAt}-${Math.random()}`,
+    webAppId: webApp.id,
+    webAppName: webApp.name,
+    startedAt,
+    endedAt: null,
+    durationSeconds: 0,
+  };
+}
+
+function getDurationSeconds(startedAt: number, endedAt: number): number {
+  return Math.max(0, Math.floor((endedAt - startedAt) / 1000));
+}
+
 type WebAppStoreState = {
   // 現在のセッション情報
   currentSession: WebAppSession | null;
@@ -24,43 +39,51 @@ export const useWebAppStore = create<WebAppStoreState>((set, get) => ({
   webApps: [],
 
   setCurrentWebApp: (webApp: WebApp) => {
-    // 現在のセッションを終了
     const { currentSession } = get();
-    if (currentSession && currentSession.endedAt === null) {
-      const endedAt = Date.now();
-      const durationSeconds = Math.floor((endedAt - currentSession.startedAt) / 1000);
-
-      set((state) => ({
-        usageStats: state.usageStats.map((stat) =>
-          stat.webAppId === currentSession.webAppId
-            ? {
-                ...stat,
-                cumulativeSeconds: stat.cumulativeSeconds + durationSeconds,
-              }
-            : stat
-        ),
-      }));
+    if (
+      currentSession &&
+      currentSession.endedAt === null &&
+      currentSession.webAppId === webApp.id
+    ) {
+      return;
     }
 
-    // 新しいセッションを開始
-    const newSession: WebAppSession = {
-      id: `session-${Date.now()}-${Math.random()}`,
-      webAppId: webApp.id,
-      webAppName: webApp.name,
-      startedAt: Date.now(),
-      endedAt: null,
-      durationSeconds: 0,
-    };
+    const now = Date.now();
+    const nextSession = createWebAppSession(webApp, now);
 
     set((state) => {
-      const existingStats = state.usageStats.find((s) => s.webAppId === webApp.id);
+      const nextUsageStats = state.usageStats.map((stat) => {
+        if (!currentSession || currentSession.endedAt !== null) {
+          return stat;
+        }
+
+        if (stat.webAppId !== currentSession.webAppId) {
+          return stat;
+        }
+
+        const durationSeconds = getDurationSeconds(currentSession.startedAt, now);
+
+        return {
+          ...stat,
+          cumulativeSeconds: stat.cumulativeSeconds + durationSeconds,
+        };
+      });
+
+      const existingStats = nextUsageStats.find((s) => s.webAppId === webApp.id);
 
       return {
-        currentSession: newSession,
+        currentSession: nextSession,
         usageStats: existingStats
-          ? state.usageStats
+          ? nextUsageStats.map((stat) =>
+              stat.webAppId === webApp.id
+                ? {
+                    ...stat,
+                    sessionCount: stat.sessionCount + 1,
+                  }
+                : stat,
+            )
           : [
-              ...state.usageStats,
+              ...nextUsageStats,
               {
                 webAppId: webApp.id,
                 webAppName: webApp.name,
@@ -76,7 +99,7 @@ export const useWebAppStore = create<WebAppStoreState>((set, get) => ({
     const { currentSession } = get();
     if (currentSession && currentSession.endedAt === null) {
       const endedAt = Date.now();
-      const durationSeconds = Math.floor((endedAt - currentSession.startedAt) / 1000);
+      const durationSeconds = getDurationSeconds(currentSession.startedAt, endedAt);
 
       set((state) => ({
         currentSession: {
