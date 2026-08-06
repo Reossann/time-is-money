@@ -1,3 +1,4 @@
+import { isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 import { detectWebApp } from "./webAppService";
@@ -7,11 +8,17 @@ import { nativeWebAppChangeSchema } from "../utils/schemas";
 export const NATIVE_WEB_APP_CHANGE_RECEIVED_EVENT =
   "native-web-app-change";
 
+const noop = () => {};
+
 /**
  * Tauri から届いた Native Messaging 由来の URL 変更を受け取り、
  * 既存の WebApp ストアへ流し込む。
  */
 export async function startNativeWebAppBridgeListener(): Promise<() => void> {
+  if (!isTauri()) {
+    return noop;
+  }
+
   return listen<unknown>(
     NATIVE_WEB_APP_CHANGE_RECEIVED_EVENT,
     ({ payload }) => {

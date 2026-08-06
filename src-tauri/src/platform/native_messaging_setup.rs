@@ -443,9 +443,9 @@ mod tests {
             .expect("path should exist")
             .ends_with(HOST_EXE_NAME));
         assert_eq!(
-            parsed["allowedOrigins"]
+            parsed["allowed_origins"]
                 .as_array()
-                .expect("allowedOrigins should be array")
+                .expect("allowed_origins should be array")
                 .len(),
             config.allowed_origins.len()
         );

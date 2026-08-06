@@ -404,7 +404,7 @@ mod tests {
     }
 
     #[test]
-    fn run_host_with_io_writes_framed_response() {
+    fn run_host_with_io_reports_when_tauri_app_is_unavailable() {
         let input = encode_message(
             br#"{"type":"URL_CHANGE","url":"https://example.com/?q=1#x","timestamp":1}"#,
         );
@@ -416,12 +416,15 @@ mod tests {
         let response_length = u32::from_le_bytes(output[0..4].try_into().unwrap()) as usize;
         let response = serde_json::from_slice::<Value>(&output[4..4 + response_length]).unwrap();
 
-        assert_eq!(response["success"], true);
-        assert_eq!(response["code"], CODE_OK);
-        assert_eq!(response["sanitizedUrl"], "https://example.com/");
+        assert_eq!(response["success"], false);
+        assert_eq!(response["code"], "APP_UNAVAILABLE");
+        assert!(response["message"]
+            .as_str()
+            .expect("response should contain a message")
+            .contains("Tauri app bridge unavailable"));
         assert!(String::from_utf8(logs)
             .unwrap()
-            .contains("processed message"));
+            .contains("could not deliver to Tauri app"));
     }
 
     #[test]
