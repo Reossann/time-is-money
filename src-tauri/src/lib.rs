@@ -118,14 +118,27 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                // TODO: 活動計測が実装されたら、固定60秒ではなく実際の通知条件に接続する。
-                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                // TODO: 活動計測が実装されたら、固定タイマーではなく実際の通知条件に接続する。（動作確認用に5秒に変更）
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+                // デフォルトの口調モード: スパルタ (spartan)
+                let messages = [
+                    "おい、手が止まってるぞ。時間はタダじゃないんだが？",
+                    "サボり検出！今この瞬間もハッカソンの残り時間が減っています。",
+                    "またSNS見てない？その3分があれば1機能作れたよね？",
+                    "現実逃避は終了！黙ってキーボードに手を戻しなさい！",
+                    "締め切り『やあ、僕だよ。準備はできてるかい？』",
+                ];
+
+                use rand::seq::SliceRandom;
+                let mut rng = rand::thread_rng();
+                let body = messages.choose(&mut rng).copied().unwrap_or(messages[0]);
 
                 if let Err(error) = app_handle
                     .notification()
                     .builder()
                     .title("Time Is Money")
-                    .body("アプリを起動して1分が経ちました")
+                    .body(body)
                     .show()
                 {
                     eprintln!("通知送信に失敗しました: {error}");
