@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod models;
+pub mod native_messaging;
 pub mod platform;
 pub mod services;
 
