@@ -4,14 +4,14 @@ pub mod platform;
 pub mod services;
 
 use tauri::{
-    image::Image,
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, WindowEvent,
 };
 use tauri_plugin_notification::NotificationExt;
 
-const APP_ICON: Image<'_> = tauri::include_image!("icons/icon.png");
+// TODO: アイコンファイルを作成して有効化
+// const APP_ICON: Image<'_> = tauri::include_image!("icons/icon.png");
 
 /**
  * Chrome拡張機能からのウェブアプリURL情報を受け取るコマンド
@@ -92,7 +92,6 @@ pub fn run() {
                 .build()?;
 
             TrayIconBuilder::new()
-                .icon(APP_ICON)
                 .tooltip("Time Is Money")
                 .menu(&menu)
                 .show_menu_on_left_click(false)

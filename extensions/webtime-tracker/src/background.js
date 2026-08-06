@@ -1,4 +1,3 @@
-/* eslint-env browser, webextensions */
 /* global chrome, console */
 /**
  * Chrome拡張機能 - Background Service Worker

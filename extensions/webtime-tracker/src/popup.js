@@ -1,4 +1,3 @@
-/* eslint-env browser, webextensions */
 /* global chrome, console, document, setInterval, URL */
 /**
  * Chrome拡張機能 - Popup UI
