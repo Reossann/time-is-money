@@ -37,6 +37,9 @@ export function ResultFlow({ onExit }: ResultFlowProps) {
   const status = useResultFlowStore((state) => state.status);
   const mode = useResultFlowStore((state) => state.mode);
   const currentStep = useResultFlowStore((state) => state.currentStep);
+  const transitionDirection = useResultFlowStore(
+    (state) => state.transitionDirection,
+  );
   const stepStatus = useResultFlowStore(
     (state) => state.stepStatuses[state.currentStep],
   );
@@ -68,11 +71,17 @@ export function ResultFlow({ onExit }: ResultFlowProps) {
       <div className="result-flow__surface">
         <p className="result-flow__eyebrow">開発用プレビュー</p>
         <ResultProgress currentStep={currentStep} />
-        <StepComponent
-          content={RESULT_FLOW_PREVIEW_CONTENT[currentStep]}
-          status={stepStatus}
-          animationSkipped={animationSkipped}
-        />
+        <div
+          key={currentStep}
+          className={`result-step-transition result-step-transition--${transitionDirection}`}
+          data-testid="result-step-transition"
+        >
+          <StepComponent
+            content={RESULT_FLOW_PREVIEW_CONTENT[currentStep]}
+            status={stepStatus}
+            animationSkipped={animationSkipped}
+          />
+        </div>
         <ResultFlowControls
           canPrevious={currentIndex > 0}
           isLastStep={isLastStep}

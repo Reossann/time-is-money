@@ -76,6 +76,25 @@ describe("ResultFlow", () => {
     ).toBeInTheDocument();
   });
 
+  it("sets the slide direction for forward and backward navigation", async () => {
+    const user = userEvent.setup();
+    render(<ResultFlow onExit={vi.fn()} />);
+
+    expect(screen.getByTestId("result-step-transition")).toHaveClass(
+      "result-step-transition--initial",
+    );
+
+    await user.click(screen.getByRole("button", { name: "次へ" }));
+    expect(screen.getByTestId("result-step-transition")).toHaveClass(
+      "result-step-transition--forward",
+    );
+
+    await user.click(screen.getByRole("button", { name: "戻る" }));
+    expect(screen.getByTestId("result-step-transition")).toHaveClass(
+      "result-step-transition--backward",
+    );
+  });
+
   it("skips only the current placeholder animation", async () => {
     const user = userEvent.setup();
     render(<ResultFlow onExit={vi.fn()} />);

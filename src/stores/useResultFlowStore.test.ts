@@ -15,6 +15,7 @@ describe("useResultFlowStore", () => {
     expect(state.status).toBe("active");
     expect(state.mode).toBe("preview");
     expect(state.currentStep).toBe("finalizing");
+    expect(state.transitionDirection).toBe("initial");
     expect(Object.values(state.stepStatuses)).toEqual(
       RESULT_FLOW_STEPS.map(() => "placeholder"),
     );
@@ -28,6 +29,7 @@ describe("useResultFlowStore", () => {
     for (const expectedStep of RESULT_FLOW_STEPS.slice(1)) {
       useResultFlowStore.getState().next();
       expect(useResultFlowStore.getState().currentStep).toBe(expectedStep);
+      expect(useResultFlowStore.getState().transitionDirection).toBe("forward");
     }
 
     useResultFlowStore.getState().next();
@@ -35,6 +37,7 @@ describe("useResultFlowStore", () => {
 
     useResultFlowStore.getState().previous();
     expect(useResultFlowStore.getState().currentStep).toBe("improvement");
+    expect(useResultFlowStore.getState().transitionDirection).toBe("backward");
   });
 
   it("marks the current animation as skipped once", () => {

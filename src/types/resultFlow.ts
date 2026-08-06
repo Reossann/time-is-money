@@ -6,6 +6,11 @@ export type ResultFlowStatus = "idle" | "active" | "completed";
 
 export type ResultFlowMode = "preview" | "live" | "replay";
 
+export type ResultFlowTransitionDirection =
+  | "initial"
+  | "forward"
+  | "backward";
+
 export type ResultStepStatus = "placeholder" | "ready";
 
 export type ResultStepStatuses = Readonly<

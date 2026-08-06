@@ -5,6 +5,7 @@ import type {
   ResultFlowMode,
   ResultFlowStatus,
   ResultFlowStep,
+  ResultFlowTransitionDirection,
   ResultStepStatuses,
 } from "../types/resultFlow";
 
@@ -12,6 +13,7 @@ type ResultFlowState = {
   status: ResultFlowStatus;
   mode: ResultFlowMode | null;
   currentStep: ResultFlowStep;
+  transitionDirection: ResultFlowTransitionDirection;
   stepStatuses: ResultStepStatuses;
   skippedAnimations: readonly ResultFlowStep[];
   start: (mode: ResultFlowMode) => void;
@@ -34,6 +36,7 @@ function createIdleState() {
     status: "idle" as const,
     mode: null,
     currentStep: RESULT_FLOW_STEPS[0],
+    transitionDirection: "initial" as const,
     stepStatuses: createPlaceholderStatuses(),
     skippedAnimations: [] as readonly ResultFlowStep[],
   };
@@ -46,6 +49,7 @@ export const useResultFlowStore = create<ResultFlowState>((set, get) => ({
       status: "active",
       mode,
       currentStep: RESULT_FLOW_STEPS[0],
+      transitionDirection: "initial",
       stepStatuses: createPlaceholderStatuses(),
       skippedAnimations: [],
     });
@@ -56,7 +60,9 @@ export const useResultFlowStore = create<ResultFlowState>((set, get) => ({
 
     const currentIndex = RESULT_FLOW_STEPS.indexOf(currentStep);
     const nextStep = RESULT_FLOW_STEPS[currentIndex + 1];
-    if (nextStep) set({ currentStep: nextStep });
+    if (nextStep) {
+      set({ currentStep: nextStep, transitionDirection: "forward" });
+    }
   },
   previous: () => {
     const { currentStep, status } = get();
@@ -64,7 +70,9 @@ export const useResultFlowStore = create<ResultFlowState>((set, get) => ({
 
     const currentIndex = RESULT_FLOW_STEPS.indexOf(currentStep);
     const previousStep = RESULT_FLOW_STEPS[currentIndex - 1];
-    if (previousStep) set({ currentStep: previousStep });
+    if (previousStep) {
+      set({ currentStep: previousStep, transitionDirection: "backward" });
+    }
   },
   skipAnimation: () => {
     const { currentStep, skippedAnimations, status } = get();
