@@ -3713,6 +3713,7 @@ dependencies = [
  "tauri-plugin-notification",
  "tokio",
  "url",
+ "windows",
 ]
 
 [[package]]

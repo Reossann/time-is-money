@@ -5,16 +5,15 @@
   "description": "PCで開いているウェブアプリの利用時間を自動計測します",
   "permissions": [
     "tabs",
-    "nativeMessaging"
-  ],
-  "host_permissions": [
-    "<all_urls>"
+    "nativeMessaging",
+    "storage"
   ],
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "Time Is Money - Web Tracker"
   },
   "background": {
-    "service_worker": "src/background.js"
+    "service_worker": "src/background.js",
+    "type": "module"
   }
 }

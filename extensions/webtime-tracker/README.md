@@ -10,10 +10,10 @@ extensions/webtime-tracker/
 ├── README.md             # このファイル
 └── src/
     ├── background.js     # Service Worker（タブ監視、URL送信）
+    ├── tracking-utils.js # URLの正規化、重複排除、アプリ判定
     ├── popup.html        # ポップアップUI
     ├── popup.js          # ポップアップロジック
-    ├── popup.css         # ポップアップスタイル
-    └── icons/            # 拡張機能アイコン（16x16, 48x48, 128x128）
+    └── popup.css         # ポップアップスタイル
 ```
 
 ## 機能
@@ -40,7 +40,9 @@ extensions/webtime-tracker/
 
 - `tabs`: アクティブなタブを取得
 - `nativeMessaging`: Tauri アプリと通信
-- `<all_urls>`: すべてのウェブページにアクセス
+- `storage`: Service Workerの再起動後も直前のURLを保持
+
+取得対象はHTTP/HTTPSのみです。送信前にURLのクエリ文字列とハッシュを除去します。
 
 ## 通信仕様
 

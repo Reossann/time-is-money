@@ -1,4 +1,4 @@
-/* global chrome, console, document, setInterval, URL */
+import { inferAppName } from "./tracking-utils.js";
 /**
  * Chrome拡張機能 - Popup UI
  * 現在のモニタリング状況とウェブアプリを表示
@@ -49,11 +49,7 @@ async function updateUI() {
  */
 function updateAppDisplay(url) {
   try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname;
-
-    // ホスト名からアプリ名を推測
-    const appName = inferAppName(hostname);
+    const appName = inferAppName(url);
 
     appNameElement.textContent = appName;
     appUrlElement.textContent = url;
@@ -62,43 +58,6 @@ function updateAppDisplay(url) {
     appNameElement.textContent = "不明なアプリ";
     appUrlElement.textContent = url;
   }
-}
-
-/**
- * ホスト名からアプリ名を推測
- * @param {string} hostname - ホスト名
- * @returns {string} アプリ名
- */
-function inferAppName(hostname) {
-  // 主要なウェブアプリのマッピング
-  const appMappings = {
-    "docs.google.com": "Google Docs",
-    "sheets.google.com": "Google Sheets",
-    "mail.google.com": "Gmail",
-    "drive.google.com": "Google Drive",
-    "slack.com": "Slack",
-    "notion.so": "Notion",
-    "github.com": "GitHub",
-    "youtube.com": "YouTube",
-    "x.com": "X (Twitter)",
-    "chatgpt.com": "ChatGPT",
-    "claude.ai": "Claude",
-  };
-
-  // 完全一致を確認
-  if (appMappings[hostname]) {
-    return appMappings[hostname];
-  }
-
-  // パーシャルマッチを確認
-  for (const [key, value] of Object.entries(appMappings)) {
-    if (hostname.includes(key)) {
-      return value;
-    }
-  }
-
-  // マッピングにない場合、ホスト名をそのまま返す
-  return hostname;
 }
 
 // Popup が開かれた時に UI を更新

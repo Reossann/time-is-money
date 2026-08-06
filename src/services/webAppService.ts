@@ -8,81 +8,89 @@ const WEB_APPS_DATABASE: Array<{
   id: string;
   name: string;
   domain: string;
-  patterns: RegExp[];
+  domains: string[];
+  pathPrefixes?: string[];
 }> = [
   {
     id: "google-docs",
     name: "Google Docs",
     domain: "docs.google.com",
-    patterns: [/docs\.google\.com\/document/],
+    domains: ["docs.google.com"],
+    pathPrefixes: ["/document"],
   },
   {
     id: "google-sheets",
     name: "Google Sheets",
     domain: "docs.google.com",
-    patterns: [/docs\.google\.com\/spreadsheets/],
+    domains: ["docs.google.com"],
+    pathPrefixes: ["/spreadsheets"],
   },
   {
     id: "google-slides",
     name: "Google Slides",
     domain: "docs.google.com",
-    patterns: [/docs\.google\.com\/presentation/],
+    domains: ["docs.google.com"],
+    pathPrefixes: ["/presentation"],
   },
   {
     id: "gmail",
     name: "Gmail",
     domain: "mail.google.com",
-    patterns: [/mail\.google\.com/],
+    domains: ["mail.google.com"],
   },
   {
     id: "google-drive",
     name: "Google Drive",
     domain: "drive.google.com",
-    patterns: [/drive\.google\.com/],
+    domains: ["drive.google.com"],
   },
   {
     id: "slack",
     name: "Slack",
     domain: "app.slack.com",
-    patterns: [/app\.slack\.com/],
+    domains: ["slack.com"],
   },
   {
     id: "notion",
     name: "Notion",
     domain: "notion.so",
-    patterns: [/notion\.so/, /app\.notionforms\.com/],
+    domains: ["notion.so", "app.notionforms.com"],
   },
   {
     id: "github",
     name: "GitHub",
     domain: "github.com",
-    patterns: [/github\.com/],
+    domains: ["github.com"],
   },
   {
     id: "youtube",
     name: "YouTube",
     domain: "youtube.com",
-    patterns: [/youtube\.com/, /youtu\.be/],
+    domains: ["youtube.com", "youtu.be"],
   },
   {
     id: "twitter",
     name: "X（旧Twitter）",
     domain: "x.com",
-    patterns: [/x\.com/, /twitter\.com/],
+    domains: ["x.com", "twitter.com"],
   },
   {
     id: "chatgpt",
     name: "ChatGPT",
     domain: "chatgpt.com",
-    patterns: [/chatgpt\.com/, /chat\.openai\.com/],
+    domains: ["chatgpt.com", "chat.openai.com"],
   },
   {
     id: "claude",
     name: "Claude",
     domain: "claude.ai",
-    patterns: [/claude\.ai/],
+    domains: ["claude.ai"],
   },
 ];
+
+function matchesDomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
 
 /**
  * URLからウェブアプリを判定
@@ -92,19 +100,24 @@ const WEB_APPS_DATABASE: Array<{
 export function detectWebApp(url: string): WebApp | null {
   try {
     const urlObj = new URL(url);
-    const fullUrl = urlObj.toString();
+    const hostname = urlObj.hostname.toLowerCase();
 
     // マッピングからマッチするアプリを検索
     for (const app of WEB_APPS_DATABASE) {
-      for (const pattern of app.patterns) {
-        if (pattern.test(fullUrl)) {
-          return {
-            id: app.id,
-            name: app.name,
-            url,
-            domain: app.domain,
-          };
-        }
+      const domainMatches = app.domains.some((domain) =>
+        matchesDomain(hostname, domain),
+      );
+      const pathMatches =
+        !app.pathPrefixes ||
+        app.pathPrefixes.some((prefix) => urlObj.pathname.startsWith(prefix));
+
+      if (domainMatches && pathMatches) {
+        return {
+          id: app.id,
+          name: app.name,
+          url,
+          domain: app.domain,
+        };
       }
     }
 
@@ -227,9 +240,10 @@ export function formatSessionDuration(seconds: number): string {
       );
     }
 
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const wholeSeconds = Math.floor(seconds);
+    const hours = Math.floor(wholeSeconds / 3600);
+    const minutes = Math.floor((wholeSeconds % 3600) / 60);
+    const secs = wholeSeconds % 60;
 
     return [
       String(hours).padStart(2, "0"),
