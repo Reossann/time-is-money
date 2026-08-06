@@ -310,13 +310,19 @@ flowchart LR
 
 ## 5. データ設計案
 
-- TypeScript の型: `ActivityRecord`, `AppRule`, `AppSettings`, `ActiveWindowInfo`, `ActivityCategory`。
+- TypeScript の型: `ActivityRecord`, `AppRule`, `AppSettings`, `ActiveWindowInfo`, `ActivityCategory`, `MoneyCalculationInput`, `MoneyBreakdown`。
 - Rust の構造体: `ActivityRecord`, `AppRule`, `AppSettings`, `ActiveWindowInfo`, `ActivityCategory`, `MatchType` を定義済み。
 - SQLite のテーブル案: `activity_records`, `app_rules`, `app_settings`。
-- 各カラムの意味: `process_name` はプロセス名、`window_title` はウィンドウタイトル、`category` は分類、`started_at` / `ended_at` は開始終了時刻、`duration_seconds` は利用秒数、`hourly_rate` は時給、`calculated_cost` は換算金額。
+- 各カラムの意味: `process_name` はプロセス名、`window_title` はウィンドウタイトル、`category` は分類、`started_at` / `ended_at` は開始終了時刻、`duration_seconds` は利用秒数、`hourly_rate` は時給。既存案の `calculated_cost` は互換性確認用のレガシー項目とし、新しい金額計算の正本にはしない。
 - 主キー: `id` を TEXT の主キーとして扱う案。
 - 日時の保存形式: UNIX epoch の整数で保存する案。
-- 金額の計算方法: `duration_seconds / 3600 * hourly_rate` を基本とし、表示時に丸める案。
+- 金額計算の正本: `src/services/moneyCalculationService.ts` の純粋関数を唯一の計算元とし、Rust、UI、repositoryでは再計算しない。
+- 金額計算の入力: `durationSeconds` は0以上の安全な整数で単位は秒、`hourlyRateYen` は0以上の有限数で単位は円/時とする。小数の時給も受け付ける。
+- 1レコードの換算式: `Math.round(durationSeconds * hourlyRateYen / 3600)` でレコードごとに円整数へ丸め、その後に集計する。
+- 分類別の扱い: `productive` は `earnedYen`、`waste` は `wastedYen` に換算額を入れる。`neutral`、`null`、`undefined` はどちらも0円とする。未知の分類値はエラーにする。
+- 金額結果の不変条件: `earnedYen` と `wastedYen` は0以上の安全な整数、`netYen` は `earnedYen - wastedYen` とする。集計はレコード別の `MoneyBreakdown` を加算し、この条件を維持する。
+- 金額計算の失敗: 不正な秒数・時給・分類・内訳、および JavaScript の安全な整数範囲を超える結果は、値をログやメッセージへ露出させず `MoneyCalculationError` で通知する。
+- UI・保存との接続: 金額計算サービスは実装済みだが、画面表示と永続化には未接続。将来の保存処理はサービスが返した `MoneyBreakdown` を扱い、`calculated_cost` や別式から再計算しない。
 - カテゴリの管理方法: `productive / waste / neutral` の列挙型で管理する案。
 - データベースが未実装であること: 現時点では SQLite も永続化も未実装。
 
@@ -366,9 +372,9 @@ npm run tauri dev
 ## 9. 実装状況
 
 - 現在の主要構成: React画面、Zustandストア、Zodスキーマ、TypeScriptサービス、Rustモデル・platform・Command、Tauri通知・自動起動・システムトレイ設定。
-- 現在動作する機能: 4画面の切り替え、アプリ起動からの経過時間表示、自動起動の切り替え、テスト通知、起動1分後の仮通知、トレイ常駐と再表示・終了、前面ウィンドウ情報の単発取得とTauri Command・型/値検証付きフロントサービス。
+- 現在動作する機能: 4画面の切り替え、アプリ起動からの経過時間表示、自動起動の切り替え、テスト通知、起動1分後の仮通知、トレイ常駐と再表示・終了、前面ウィンドウ情報の単発取得とTauri Command・型/値検証付きフロントサービス、分類済みレコードの金額換算と集計を行うTypeScript純粋関数。
 - プレースホルダーとして存在するファイル: `src/services/settingsService.ts`, `src/services/tauriService.ts`, `src-tauri/src/commands/settings.rs`, `src-tauri/src/services/*`。
-- 未実装の機能: 前面ウィンドウの継続監視、切り替え検知、アプリ別時間計測、保存、分類、履歴表示、金額換算、集計、ブラウザ拡張機能、クラウド通信。
+- 未実装の機能: 前面ウィンドウの継続監視、切り替え検知、アプリ別時間計測、保存、分類、履歴表示、金額結果のUI表示・保存への接続、ブラウザ拡張機能、クラウド通信。
 - 将来実装する機能: 活動レコード作成、ルール適用、SQLite保存、実際の利用条件に基づく通知、日次・週次・月次集計。
 - Windows 限定の処理: 前面ウィンドウの単発取得。アイドル検知などは将来の対象。
 - 現時点で導入していないライブラリやプラグイン: Tauri SQL Plugin、Tauri Store Plugin。
