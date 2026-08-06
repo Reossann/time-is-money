@@ -138,6 +138,19 @@ describe("activeWindowInfoSchema", () => {
     expect(activeWindowInfoSchema.safeParse(validActiveWindowInfo).success).toBe(true);
   });
 
+  it.each([
+    ["an empty process name", { ...validActiveWindowInfo, processName: "" }],
+    ["a zero process ID", { ...validActiveWindowInfo, processId: 0 }],
+    ["a negative process ID", { ...validActiveWindowInfo, processId: -1 }],
+    ["a fractional process ID", { ...validActiveWindowInfo, processId: 1.5 }],
+    [
+      "a process ID larger than u32",
+      { ...validActiveWindowInfo, processId: 0x1_0000_0000 },
+    ],
+  ])("rejects %s", (_description, payload) => {
+    expect(activeWindowInfoSchema.safeParse(payload).success).toBe(false);
+  });
+
   it("rejects snake_case JSON keys", () => {
     expect(
       activeWindowInfoSchema.safeParse({

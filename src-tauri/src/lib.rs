@@ -31,6 +31,9 @@ fn show_main_window(app: &AppHandle) {
 
 pub fn run() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            commands::activity::get_active_window_info
+        ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             #[cfg(desktop)]

@@ -33,7 +33,7 @@ export const appSettingsSchema = z.object({
 });
 
 export const activeWindowInfoSchema = z.object({
-  processName: z.string(),
+  processName: z.string().min(1),
   windowTitle: z.string(),
-  processId: z.number(),
+  processId: z.number().int().positive().max(0xffff_ffff),
 });
