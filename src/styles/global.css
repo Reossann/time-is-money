@@ -148,6 +148,73 @@ button {
   line-height: 1.8;
 }
 
+.timer-section,
+.current-webapp-section,
+.web-apps-section {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 12px 34px rgba(21, 30, 49, 0.06);
+}
+
+.timer-display {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.current-webapp-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(31, 111, 235, 0.12), rgba(31, 111, 235, 0.05));
+  border: 1px solid rgba(31, 111, 235, 0.18);
+}
+
+.current-webapp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.webapp-list {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+}
+
+.webapp-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(23, 32, 51, 0.08);
+}
+
+.webapp-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.webapp-duration {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.webapp-session-count {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

@@ -5,7 +5,20 @@ import { formatSessionDuration } from "../services/webAppService";
 
 export function DashboardPage() {
   const elapsedSeconds = useActivityStore((state) => state.elapsedSeconds);
+  const currentSession = useWebAppStore((state) => state.currentSession);
   const usageStats = useWebAppStore((state) => state.usageStats);
+
+  const currentSessionStartedAt = currentSession?.endedAt ?? null
+    ? null
+    : currentSession?.startedAt ?? null;
+
+  const currentSessionStartedLabel = currentSessionStartedAt
+    ? new Intl.DateTimeFormat("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(currentSessionStartedAt)
+    : null;
 
   let formattedTime: string;
   try {
@@ -32,6 +45,23 @@ export function DashboardPage() {
         <div className="timer-display">{formattedTime}</div>
         <p>計測状況: 計測中 ▶</p>
         <p>アプリを開いてからの利用時間を表示しています。</p>
+      </section>
+
+      <section className="current-webapp-section">
+        <h3>現在のウェブアプリ</h3>
+        {currentSession && currentSession.endedAt === null ? (
+          <div className="current-webapp-card">
+            <div className="webapp-name">{currentSession.webAppName}</div>
+            <div className="current-webapp-meta">
+              <span>セッション計測中</span>
+              {currentSessionStartedLabel && (
+                <span>開始: {currentSessionStartedLabel}</span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p>まだ現在のウェブアプリは検出されていません。</p>
+        )}
       </section>
 
       <section className="web-apps-section">
