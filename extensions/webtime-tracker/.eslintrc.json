@@ -1,0 +1,25 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "webextensions": true
+  },
+  "globals": {
+    "chrome": "readonly",
+    "console": "readonly",
+    "document": "readonly",
+    "setInterval": "readonly",
+    "clearInterval": "readonly",
+    "setTimeout": "readonly",
+    "clearTimeout": "readonly",
+    "Date": "readonly"
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-undef": "off",
+    "no-unused-vars": "warn"
+  }
+}

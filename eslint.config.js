@@ -11,6 +11,18 @@ export default [
   },
   js.configs.recommended,
   {
+    files: ["extensions/webtime-tracker/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.webextensions,
+      },
+    },
+    rules: {
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser,
