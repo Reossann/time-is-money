@@ -22,5 +22,17 @@
     "security": {
       "capabilities": ["default"]
     }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "resources": {
+      "native-messaging.config.json": "native-messaging.config.json"
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer/native-messaging.nsh"
+      }
+    }
   }
 }

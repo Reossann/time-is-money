@@ -74,6 +74,7 @@ pub fn run() {
             }
 
             services::native_bridge_service::start_native_bridge_listener(app.handle().clone());
+            services::native_messaging_setup_service::ensure_native_messaging_host_registered();
 
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();

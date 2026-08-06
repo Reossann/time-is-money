@@ -2,6 +2,8 @@
 name = "time-is-money"
 version = "0.1.5"
 edition = "2021"
+autobins = false
+default-run = "time-is-money"
 
 [lib]
 name = "time_is_money"
@@ -20,10 +22,23 @@ tokio = { version = "1", features = ["time", "rt"] }
 url = "2"
 
 [target.'cfg(windows)'.dependencies]
+winreg = "0.55"
 windows = { version = ">=0.59, <=0.62", features = [
     "Win32_Foundation",
     "Win32_System_Threading",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+[[bin]]
+name = "time-is-money"
+path = "src/main.rs"
+
+[[bin]]
+name = "native-messaging-host"
+path = "src/bin/native_messaging_host.rs"
+
+[[bin]]
+name = "native-messaging-setup"
+path = "src/bin/native_messaging_setup.rs"
 
 [dev-dependencies]
