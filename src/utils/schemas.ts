@@ -37,3 +37,8 @@ export const activeWindowInfoSchema = z.object({
   windowTitle: z.string(),
   processId: z.number().int().positive().max(0xffff_ffff),
 });
+
+export const nativeWebAppChangeSchema = z.object({
+  url: z.string().url(),
+  timestamp: z.number().int().nonnegative(),
+});

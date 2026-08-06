@@ -2,4 +2,5 @@
 //! 現在は未実装。
 
 pub mod activity_service;
+pub mod native_bridge_service;
 pub mod settings_service;

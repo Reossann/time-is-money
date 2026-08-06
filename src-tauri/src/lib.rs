@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod models;
+pub mod native_bridge;
 pub mod native_messaging;
 pub mod platform;
 pub mod services;
@@ -72,6 +73,8 @@ pub fn run() {
                 ))?;
             }
 
+            services::native_bridge_service::start_native_bridge_listener(app.handle().clone());
+
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
                 window.on_window_event(move |event| {
@@ -132,6 +135,7 @@ pub fn run() {
                     eprintln!("通知送信に失敗しました: {error}");
                 }
             });
+
             Ok(())
         })
         .run(tauri::generate_context!())

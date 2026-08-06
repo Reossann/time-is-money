@@ -5,6 +5,8 @@ use serde_json::Value;
 use std::io::{self, Read, Write};
 use url::Url;
 
+use crate::native_bridge::{forward_native_web_app_change, NativeWebAppChange};
+
 pub const MAX_MESSAGE_BYTES: u32 = 256 * 1024;
 const MESSAGE_TYPE_URL_CHANGE: &str = "URL_CHANGE";
 const CODE_OK: &str = "OK";
@@ -241,6 +243,36 @@ pub fn run_host_with_io<R: Read, W: Write, E: Write>(
     };
 
     let response = handle_message(&payload);
+    if response.success {
+        let bridge_payload = NativeWebAppChange {
+            url: response
+                .sanitized_url
+                .clone()
+                .unwrap_or_else(|| payload_url_for_bridge(&payload)),
+            timestamp: extract_timestamp(&payload).unwrap_or(0),
+        };
+
+        if let Err(error) = forward_native_web_app_change(&bridge_payload) {
+            let response = NativeMessagingResponse::error(
+                "APP_UNAVAILABLE",
+                format!("Tauri app bridge unavailable: {error}"),
+            );
+            let response_bytes = serde_json::to_vec(&response).map_err(|serialize_error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("serialize response failed: {serialize_error}"),
+                )
+            })?;
+
+            write_frame(&mut writer, &response_bytes)?;
+            let _ = writeln!(
+                error_writer,
+                "Native Messaging Host could not deliver to Tauri app: {error}"
+            );
+
+            return Ok(());
+        }
+    }
     let response_bytes = match serde_json::to_vec(&response) {
         Ok(bytes) => bytes,
         Err(error) => {
@@ -273,6 +305,24 @@ pub fn run_host_with_io<R: Read, W: Write, E: Write>(
     );
 
     Ok(())
+}
+
+fn payload_url_for_bridge(payload: &[u8]) -> String {
+    serde_json::from_slice::<Value>(payload)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("url")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned)
+        })
+        .unwrap_or_default()
+}
+
+fn extract_timestamp(payload: &[u8]) -> Option<u64> {
+    serde_json::from_slice::<Value>(payload)
+        .ok()
+        .and_then(|value| value.get("timestamp").and_then(Value::as_u64))
 }
 
 #[cfg(test)]
