@@ -3,7 +3,11 @@ import { useWebAppStore } from "../stores/useWebAppStore";
 import { formatTime } from "../services/activityService";
 import { formatSessionDuration } from "../services/webAppService";
 
-export function DashboardPage() {
+type DashboardPageProps = {
+  onPreviewResultFlow?: () => void;
+};
+
+export function DashboardPage({ onPreviewResultFlow }: DashboardPageProps) {
   const elapsedSeconds = useActivityStore((state) => state.elapsedSeconds);
   const currentSession = useWebAppStore((state) => state.currentSession);
   const usageStats = useWebAppStore((state) => state.usageStats);
@@ -84,6 +88,19 @@ export function DashboardPage() {
           </ul>
         )}
       </section>
+
+      {import.meta.env.DEV && onPreviewResultFlow ? (
+        <section className="result-preview-entry" aria-label="開発用機能">
+          <p className="result-preview-entry__label">Development only</p>
+          <h3>結果フローの骨組み</h3>
+          <p>
+            実データを使わず、タイマー停止後の8段階と操作だけを確認します。
+          </p>
+          <button type="button" onClick={onPreviewResultFlow}>
+            結果フローをプレビュー
+          </button>
+        </section>
+      ) : null}
     </main>
   );
 }
