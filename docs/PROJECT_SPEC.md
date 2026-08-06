@@ -152,6 +152,7 @@
 - React・TypeScript 側が担当する処理: 画面表示、ナビゲーション、アプリ起動からの経過時間状態、自動起動設定、テスト通知、サービス層を通したCommand呼び出しと実行時検証。
 - Rust 側が担当する処理: Tauriウィンドウ制御、Windows APIによる前面ウィンドウ情報の単発取得、Tauri Command、システムトレイ、起動1分後の仮通知、将来的な保存処理の仲介。
 - Tauri Command の呼び出し構造: `getActiveWindowInfo()` が `@tauri-apps/api` の `invoke("get_active_window_info")` を呼び、戻り値をZodで検証する。Dashboardからはまだ呼び出していない。
+- Native Messaging の固定仕様: Chrome拡張機能とNative Messaging Host間の入出力契約は `docs/NATIVE_MESSAGING_PROTOCOL.md` を正本とする。
 - 将来的な SQLite 保存の流れ: UI で設定や分類結果を更新し、Rust 側のサービスが SQLite へ保存する予定。
 - 前面ウィンドウ取得の流れ: Rust側のplatformモジュールがWindows APIから情報を取得し、登録済みCommand経由でフロントサービスへ返す。
 - 現在のタイマー表示の流れ: `App.tsx` が起動時刻をZustandへ保存し、1秒ごとに実経過時間を同期してDashboardへ表示する。この値はアプリ別の利用時間ではない。

@@ -46,6 +46,10 @@ extensions/webtime-tracker/
 
 ## 通信仕様
 
+Native Messaging の正式仕様は `docs/NATIVE_MESSAGING_PROTOCOL.md` を参照してください。
+
+この README では概要のみ記載します。
+
 ### URL 送信（拡張機能 → Tauri）
 
 ```json
@@ -56,14 +60,19 @@ extensions/webtime-tracker/
 }
 ```
 
+補足:
+
+- 送信対象は HTTP/HTTPS のみ
+- query / hash / 認証情報は除去して送信
+
 ### レスポンス（Tauri → 拡張機能）
 
 ```json
 {
   "success": true,
-  "message": "URLを受け取りました: https://...",
-  "webAppId": "google-docs",
-  "webAppName": "Google Docs"
+  "code": "OK",
+  "message": "URL accepted",
+  "sanitizedUrl": "https://docs.google.com/document/d/example"
 }
 ```
 
