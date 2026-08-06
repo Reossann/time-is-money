@@ -95,7 +95,7 @@ export function SettingsPage() {
 
   return (
     <main className="page">
-      <h2>Settings</h2>
+      <h2>設定</h2>
       <section>
         <h3>一般</h3>
         <label>

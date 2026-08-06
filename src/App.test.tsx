@@ -9,7 +9,7 @@ import { useResultFlowStore } from "./stores/useResultFlowStore";
 
 describe("App navigation", () => {
   beforeEach(() => {
-    useNavigationStore.setState({ currentPage: "dashboard" });
+    useNavigationStore.setState({ currentPage: "timer" });
     useActivityStore.setState({
       elapsedSeconds: 0,
       startedAt: null,
@@ -24,22 +24,22 @@ describe("App navigation", () => {
     vi.useRealTimers();
   });
 
-  it("shows the dashboard first", () => {
+  it("shows the timer page first", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "Dashboard" }),
+      screen.getByRole("heading", { level: 2, name: "タイマー" }),
     ).toBeInTheDocument();
   });
 
-  it("shows history after clicking its navigation button", async () => {
+  it("shows calendar after clicking its navigation button", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: /History/ }));
+    await user.click(screen.getByRole("button", { name: /カレンダー/ }));
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "History" }),
+      screen.getByRole("heading", { level: 2, name: "カレンダー" }),
     ).toBeInTheDocument();
   });
 
@@ -76,7 +76,7 @@ describe("App navigation", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "Dashboard" }),
+      screen.getByRole("heading", { level: 2, name: "タイマー" }),
     ).toBeInTheDocument();
     expect(useResultFlowStore.getState().status).toBe("idle");
   });

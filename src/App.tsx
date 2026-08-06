@@ -1,19 +1,21 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ResultFlowPreview } from "./components/result/ResultFlowPreview";
 import { useNavigation } from "./hooks/useNavigation";
 import { useActivityStore } from "./stores/useActivityStore";
 import { useResultFlowStore } from "./stores/useResultFlowStore";
-import { DashboardPage } from "./pages/DashboardPage";
-import { HistoryPage } from "./pages/HistoryPage";
-import { RulesPage } from "./pages/RulesPage";
+import { TimerPage } from "./pages/TimerPage";
+import { CalendarPage } from "./pages/CalendarPage";
+import { GraphPage } from "./pages/GraphPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import type { NavigationId } from "./constants/navigation";
 
-const pageMap = {
-  history: <HistoryPage />,
-  rules: <RulesPage />,
+const pageMap: Record<NavigationId, React.ReactNode> = {
+  timer: null, // TimerPage は特別な props を持つため下で個別に処理
+  calendar: <CalendarPage />,
+  graph: <GraphPage />,
   settings: <SettingsPage />,
-} as const;
+};
 
 export function App() {
   const { currentPage, setCurrentPage } = useNavigation();
@@ -43,16 +45,29 @@ export function App() {
     return <ResultFlowPreview onExit={exitResultFlow} />;
   }
 
-  const currentPageContent =
-    currentPage === "dashboard" ? (
-      <DashboardPage onPreviewResultFlow={openResultFlowPreview} />
-    ) : (
-      pageMap[currentPage]
-    );
+  const renderCurrentPage = (): React.ReactNode => {
+    if (currentPage === "timer") {
+      return <TimerPage onPreviewResultFlow={openResultFlowPreview} />;
+    }
+
+    const content = pageMap[currentPage];
+    if (content === undefined) {
+      return (
+        <main className="page">
+          <h2>エラー</h2>
+          <div className="error-section" role="alert" style={{ color: "red" }}>
+            <p>⚠️ 指定されたページ（{currentPage}）が見つかりませんでした。</p>
+          </div>
+        </main>
+      );
+    }
+
+    return content;
+  };
 
   return (
     <AppLayout currentPage={currentPage} onNavigate={setCurrentPage}>
-      {currentPageContent}
+      {renderCurrentPage()}
     </AppLayout>
   );
 }

@@ -30,6 +30,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 : "sidebar__item"
             }
             onClick={() => onNavigate(item.id)}
+            aria-current={currentPage === item.id ? "page" : undefined}
           >
             <span className="sidebar__item-label">{item.label}</span>
             <span className="sidebar__item-note">{item.note}</span>
