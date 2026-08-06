@@ -95,3 +95,47 @@ export function calculateMoneyBreakdown(
 
   return createMoneyBreakdown(0, 0);
 }
+
+function validateMoneyBreakdown(item: MoneyBreakdown): void {
+  if (
+    typeof item !== "object" ||
+    item === null ||
+    !Number.isSafeInteger(item.earnedYen) ||
+    item.earnedYen < 0 ||
+    !Number.isSafeInteger(item.wastedYen) ||
+    item.wastedYen < 0 ||
+    !Number.isSafeInteger(item.netYen) ||
+    item.netYen !== item.earnedYen - item.wastedYen
+  ) {
+    throw new MoneyCalculationError(
+      "INVALID_MONEY_BREAKDOWN",
+      "money breakdown must contain valid whole JPY amounts",
+    );
+  }
+}
+
+function addYenWithoutOverflow(currentYen: number, addedYen: number): number {
+  if (addedYen > Number.MAX_SAFE_INTEGER - currentYen) {
+    throw new MoneyCalculationError(
+      "AMOUNT_OUT_OF_RANGE",
+      "aggregated amount must remain a safe integer in JPY",
+    );
+  }
+
+  return currentYen + addedYen;
+}
+
+export function aggregateMoneyBreakdowns(
+  items: ReadonlyArray<MoneyBreakdown>,
+): MoneyBreakdown {
+  let earnedYen = 0;
+  let wastedYen = 0;
+
+  for (const item of items) {
+    validateMoneyBreakdown(item);
+    earnedYen = addYenWithoutOverflow(earnedYen, item.earnedYen);
+    wastedYen = addYenWithoutOverflow(wastedYen, item.wastedYen);
+  }
+
+  return createMoneyBreakdown(earnedYen, wastedYen);
+}

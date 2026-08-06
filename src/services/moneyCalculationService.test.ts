@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { MoneyCalculationInput } from "../types/money";
+import type { MoneyBreakdown, MoneyCalculationInput } from "../types";
 import {
+  aggregateMoneyBreakdowns,
   calculateMoneyBreakdown,
   MoneyCalculationError,
   validateMoneyCalculationInput,
@@ -93,6 +94,135 @@ describe("validateMoneyCalculationInput", () => {
       expect(error).toMatchObject({ code: "UNKNOWN_CATEGORY" });
       expect((error as Error).message).not.toContain(privateValue);
     }
+  });
+});
+
+describe("aggregateMoneyBreakdowns", () => {
+  it.each([
+    {
+      label: "empty",
+      items: [],
+      expected: { earnedYen: 0, wastedYen: 0, netYen: 0 },
+    },
+    {
+      label: "productive only",
+      items: [{ earnedYen: 100, wastedYen: 0, netYen: 100 }],
+      expected: { earnedYen: 100, wastedYen: 0, netYen: 100 },
+    },
+    {
+      label: "waste only",
+      items: [{ earnedYen: 0, wastedYen: 40, netYen: -40 }],
+      expected: { earnedYen: 0, wastedYen: 40, netYen: -40 },
+    },
+    {
+      label: "neutral",
+      items: [{ earnedYen: 0, wastedYen: 0, netYen: 0 }],
+      expected: { earnedYen: 0, wastedYen: 0, netYen: 0 },
+    },
+    {
+      label: "mixed apps",
+      items: [
+        { earnedYen: 100, wastedYen: 0, netYen: 100 },
+        { earnedYen: 0, wastedYen: 40, netYen: -40 },
+        { earnedYen: 0, wastedYen: 0, netYen: 0 },
+        { earnedYen: 25, wastedYen: 0, netYen: 25 },
+      ],
+      expected: { earnedYen: 125, wastedYen: 40, netYen: 85 },
+    },
+  ] as const)("aggregates $label breakdowns", ({ items, expected }) => {
+    const result = aggregateMoneyBreakdowns(items);
+
+    expect(result).toEqual(expected);
+    expect(Object.isFrozen(result)).toBe(true);
+  });
+
+  it.each([
+    null,
+    {},
+    {
+      earnedYen: -1,
+      wastedYen: 0,
+      netYen: -1,
+    },
+    {
+      earnedYen: 0.5,
+      wastedYen: 0,
+      netYen: 0.5,
+    },
+    {
+      earnedYen: Number.MAX_SAFE_INTEGER + 1,
+      wastedYen: 0,
+      netYen: Number.MAX_SAFE_INTEGER + 1,
+    },
+    {
+      earnedYen: 0,
+      wastedYen: -1,
+      netYen: 1,
+    },
+    {
+      earnedYen: 0,
+      wastedYen: 0.5,
+      netYen: -0.5,
+    },
+    {
+      earnedYen: 0,
+      wastedYen: Number.MAX_SAFE_INTEGER + 1,
+      netYen: -(Number.MAX_SAFE_INTEGER + 1),
+    },
+    {
+      earnedYen: 100,
+      wastedYen: 40,
+      netYen: 100,
+    },
+    {
+      earnedYen: 0,
+      wastedYen: 0,
+      netYen: Number.NaN,
+    },
+  ])("rejects invalid breakdown %#", (item) => {
+    expect(() =>
+      aggregateMoneyBreakdowns([item as MoneyBreakdown]),
+    ).toThrow(
+      expect.objectContaining({ code: "INVALID_MONEY_BREAKDOWN" }),
+    );
+  });
+
+  it.each(["earnedYen", "wastedYen"] as const)(
+    "rejects %s total overflow",
+    (field) => {
+      const first: MoneyBreakdown = {
+        earnedYen: field === "earnedYen" ? Number.MAX_SAFE_INTEGER : 0,
+        wastedYen: field === "wastedYen" ? Number.MAX_SAFE_INTEGER : 0,
+        netYen:
+          field === "earnedYen"
+            ? Number.MAX_SAFE_INTEGER
+            : -Number.MAX_SAFE_INTEGER,
+      };
+      const second: MoneyBreakdown = {
+        earnedYen: field === "earnedYen" ? 1 : 0,
+        wastedYen: field === "wastedYen" ? 1 : 0,
+        netYen: field === "earnedYen" ? 1 : -1,
+      };
+
+      expect(() => aggregateMoneyBreakdowns([first, second])).toThrow(
+        expect.objectContaining({ code: "AMOUNT_OUT_OF_RANGE" }),
+      );
+    },
+  );
+
+  it("returns a new result without changing its input array or items", () => {
+    const item = Object.freeze({
+      earnedYen: 100,
+      wastedYen: 40,
+      netYen: 60,
+    });
+    const items = Object.freeze([item]);
+
+    const result = aggregateMoneyBreakdowns(items);
+
+    expect(result).toEqual(item);
+    expect(result).not.toBe(item);
+    expect(items).toEqual([item]);
   });
 });
 
