@@ -8,6 +8,15 @@ import {
   validateMoneyCalculationInput,
 } from "./moneyCalculationService";
 
+function expectValidMoneyBreakdown(result: MoneyBreakdown): void {
+  expect(Number.isSafeInteger(result.earnedYen)).toBe(true);
+  expect(Number.isSafeInteger(result.wastedYen)).toBe(true);
+  expect(Number.isSafeInteger(result.netYen)).toBe(true);
+  expect(result.earnedYen).toBeGreaterThanOrEqual(0);
+  expect(result.wastedYen).toBeGreaterThanOrEqual(0);
+  expect(result.netYen).toBe(result.earnedYen - result.wastedYen);
+}
+
 describe("validateMoneyCalculationInput", () => {
   it.each([
     ["productive", "productive"],
@@ -40,6 +49,7 @@ describe("validateMoneyCalculationInput", () => {
     1.5,
     Number.NaN,
     Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
     Number.MAX_SAFE_INTEGER + 1,
   ])("rejects invalid durationSeconds %s", (durationSeconds) => {
     expect(() =>
@@ -53,7 +63,7 @@ describe("validateMoneyCalculationInput", () => {
     );
   });
 
-  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])(
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
     "rejects invalid hourlyRateYen %s",
     (hourlyRateYen) => {
       expect(() =>
@@ -133,6 +143,7 @@ describe("aggregateMoneyBreakdowns", () => {
     const result = aggregateMoneyBreakdowns(items);
 
     expect(result).toEqual(expected);
+    expectValidMoneyBreakdown(result);
     expect(Object.isFrozen(result)).toBe(true);
   });
 
@@ -221,6 +232,7 @@ describe("aggregateMoneyBreakdowns", () => {
     const result = aggregateMoneyBreakdowns(items);
 
     expect(result).toEqual(item);
+    expectValidMoneyBreakdown(result);
     expect(result).not.toBe(item);
     expect(items).toEqual([item]);
   });
@@ -254,13 +266,14 @@ describe("calculateMoneyBreakdown", () => {
       expected: { earnedYen: 0, wastedYen: 0, netYen: 0 },
     },
   ] as const)("assigns a one-hour record for $label", ({ category, expected }) => {
-    expect(
-      calculateMoneyBreakdown({
-        durationSeconds: 3_600,
-        hourlyRateYen: 3_000,
-        category,
-      }),
-    ).toEqual(expected);
+    const result = calculateMoneyBreakdown({
+      durationSeconds: 3_600,
+      hourlyRateYen: 3_000,
+      category,
+    });
+
+    expect(result).toEqual(expected);
+    expectValidMoneyBreakdown(result);
   });
 
   it.each([
@@ -328,11 +341,36 @@ describe("calculateMoneyBreakdown", () => {
       expectedYen: 72_000,
     },
   ] as const)("rounds $label per record", ({ input, expectedYen }) => {
-    expect(calculateMoneyBreakdown(input)).toEqual({
+    const result = calculateMoneyBreakdown(input);
+
+    expect(result).toEqual({
       earnedYen: expectedYen,
       wastedYen: 0,
       netYen: expectedYen,
     });
+    expectValidMoneyBreakdown(result);
+  });
+
+  it("rounds each record before aggregation", () => {
+    const records = [
+      calculateMoneyBreakdown({
+        durationSeconds: 1,
+        hourlyRateYen: 1_800,
+        category: "productive",
+      }),
+      calculateMoneyBreakdown({
+        durationSeconds: 1,
+        hourlyRateYen: 1_800,
+        category: "productive",
+      }),
+    ];
+
+    records.forEach(expectValidMoneyBreakdown);
+
+    const result = aggregateMoneyBreakdowns(records);
+
+    expect(result).toEqual({ earnedYen: 2, wastedYen: 0, netYen: 2 });
+    expectValidMoneyBreakdown(result);
   });
 
   it("rejects an amount outside the safe integer range", () => {
@@ -356,6 +394,8 @@ describe("calculateMoneyBreakdown", () => {
     const secondResult = calculateMoneyBreakdown(input);
 
     expect(firstResult).toEqual(secondResult);
+    expectValidMoneyBreakdown(firstResult);
+    expectValidMoneyBreakdown(secondResult);
     expect(firstResult).not.toBe(secondResult);
     expect(Object.isFrozen(firstResult)).toBe(true);
     expect(input).toEqual({
