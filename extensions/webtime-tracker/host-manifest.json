@@ -1,0 +1,9 @@
+{
+  "name": "com.timeismoney.app",
+  "description": "Time Is Money Native Messaging Host",
+  "path": "C:\\Users\\iniad\\Documents\\GitHub\\timeismoney\\extensions\\webtime-tracker\\host.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://elcjmahcbellfifceafigamifbibonmd/"
+  ]
+}

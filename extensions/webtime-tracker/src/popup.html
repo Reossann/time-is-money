@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time Is Money - Web Tracker</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Time Is Money</h1>
+    <h2>Web Tracker</h2>
+
+    <section class="status-section">
+      <h3>計測状況</h3>
+      <p id="status">接続中...</p>
+    </section>
+
+    <section class="current-app-section">
+      <h3>現在のウェブアプリ</h3>
+      <div id="current-app" class="app-display">
+        <p id="app-name">検出中...</p>
+        <p id="app-url" class="url-display"></p>
+      </div>
+    </section>
+
+    <section class="info-section">
+      <p class="info-text">
+        このウェブトラッカーがアクティブなタブのURLを定期的に取得し、
+        Time Is Money デスクトップアプリに送信します。
+      </p>
+    </section>
+
+    <footer class="footer">
+      <p>Version 0.1.0</p>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
