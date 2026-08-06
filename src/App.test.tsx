@@ -5,11 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { useActivityStore } from "./stores/useActivityStore";
 import { useNavigationStore } from "./stores/useNavigationStore";
+import { useResultFlowStore } from "./stores/useResultFlowStore";
 
 describe("App navigation", () => {
   beforeEach(() => {
     useNavigationStore.setState({ currentPage: "dashboard" });
     useActivityStore.setState({ elapsedSeconds: 0, startedAt: null });
+    useResultFlowStore.getState().reset();
   });
 
   afterEach(() => {
@@ -46,5 +48,30 @@ describe("App navigation", () => {
     });
 
     expect(screen.getByText("00:00:03")).toBeInTheDocument();
+  });
+
+  it("opens the development result preview outside navigation and returns", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", { name: "結果フローをプレビュー" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "計測結果を確定" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("complementary", { name: "画面ナビゲーション" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "結果演出をすべてスキップ" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Dashboard" }),
+    ).toBeInTheDocument();
+    expect(useResultFlowStore.getState().status).toBe("idle");
   });
 });
