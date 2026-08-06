@@ -10,7 +10,13 @@ import { useResultFlowStore } from "./stores/useResultFlowStore";
 describe("App navigation", () => {
   beforeEach(() => {
     useNavigationStore.setState({ currentPage: "dashboard" });
-    useActivityStore.setState({ elapsedSeconds: 0, startedAt: null });
+    useActivityStore.setState({
+      elapsedSeconds: 0,
+      startedAt: null,
+      sessionId: null,
+      measurementStatus: "idle",
+      stoppedMeasurement: null,
+    });
     useResultFlowStore.getState().reset();
   });
 
