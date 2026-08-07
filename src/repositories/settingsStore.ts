@@ -5,6 +5,7 @@ const SETTINGS_STORE_PATH = "settings.json";
 export interface SettingsStore {
   get<T>(key: string): Promise<T | undefined>;
   set(key: string, value: unknown): Promise<void>;
+  reload(options?: { ignoreDefaults?: boolean }): Promise<void>;
   save(): Promise<void>;
 }
 

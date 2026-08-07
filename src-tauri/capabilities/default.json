@@ -11,6 +11,7 @@
     "store:allow-load",
     "store:allow-get",
     "store:allow-set",
+    "store:allow-reload",
     "store:allow-save"
   ]
 }
