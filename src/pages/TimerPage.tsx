@@ -26,6 +26,10 @@ export function DashboardPage({ onPreviewResultFlow }: DashboardPageProps) {
 
   let formattedTime: string;
   try {
+    // マージ元の堅牢なバリデーションを追加
+    if (typeof elapsedSeconds !== "number" || elapsedSeconds < 0) {
+      throw new Error("入力値は 0 以上である必要があります");
+    }
     formattedTime = formatTime(elapsedSeconds);
   } catch (err) {
     const errorMsg =
@@ -51,6 +55,7 @@ export function DashboardPage({ onPreviewResultFlow }: DashboardPageProps) {
         <p>アプリを開いてからの利用時間を表示しています。</p>
       </section>
 
+      {/* HEADのみにある「現在のウェブアプリ」セクションを保持 */}
       <section className="current-webapp-section">
         <h3>現在のウェブアプリ</h3>
         {currentSession && currentSession.endedAt === null ? (
@@ -70,7 +75,8 @@ export function DashboardPage({ onPreviewResultFlow }: DashboardPageProps) {
 
       <section className="web-apps-section">
         <h3>ウェブアプリ別利用時間</h3>
-        {usageStats.length === 0 ? (
+        {/* マージ元の堅牢なチェック（Array.isArray）を追加 */}
+        {!Array.isArray(usageStats) || usageStats.length === 0 ? (
           <p>ウェブアプリの使用が検出されていません。</p>
         ) : (
           <ul className="webapp-list">

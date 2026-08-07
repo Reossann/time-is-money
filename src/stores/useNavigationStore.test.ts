@@ -4,16 +4,16 @@ import { useNavigationStore } from "./useNavigationStore";
 
 describe("useNavigationStore", () => {
   beforeEach(() => {
-    useNavigationStore.setState({ currentPage: "dashboard" });
+    useNavigationStore.setState({ currentPage: "timer" });
   });
 
-  it("starts on the dashboard page", () => {
-    expect(useNavigationStore.getState().currentPage).toBe("dashboard");
+  it("starts on the timer page", () => {
+    expect(useNavigationStore.getState().currentPage).toBe("timer");
   });
 
   it("changes the current page", () => {
-    useNavigationStore.getState().setCurrentPage("history");
+    useNavigationStore.getState().setCurrentPage("calendar");
 
-    expect(useNavigationStore.getState().currentPage).toBe("history");
+    expect(useNavigationStore.getState().currentPage).toBe("calendar");
   });
 });

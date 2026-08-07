@@ -46,7 +46,7 @@ export function SettingsPage() {
 
   return (
     <main className="page">
-      <h2>Settings</h2>
+      <h2>設定</h2>
       <section>
         <h3>一般</h3>
         <label>
@@ -69,7 +69,7 @@ export function SettingsPage() {
 
       <section>
         <h3>Web Tracker</h3>
-        <p>Chromeで起動しているウェブアプリの利用時間を計測し、ダッシュボードに表示します。</p>
+        <p>Chromeで起動しているウェブアプリの利用時間を計測し、タイマー画面に表示します。</p>
         <details>
           <summary>インストール手順</summary>
           <ol style={{ marginTop: '12px', paddingLeft: '20px' }}>
