@@ -7,7 +7,7 @@ type DashboardPageProps = {
   onPreviewResultFlow?: () => void;
 };
 
-export function DashboardPage({ onPreviewResultFlow }: DashboardPageProps) {
+export function TimerPage({ onPreviewResultFlow }: DashboardPageProps) {
   const elapsedSeconds = useActivityStore((state) => state.elapsedSeconds);
   const currentSession = useWebAppStore((state) => state.currentSession);
   const usageStats = useWebAppStore((state) => state.usageStats);

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { DashboardPage } from "./DashboardPage";
+import { TimerPage } from "./TimerPage";
 import { useActivityStore } from "../stores/useActivityStore";
 import { useWebAppStore } from "../stores/useWebAppStore";
 
@@ -19,7 +19,7 @@ describe("DashboardPage", () => {
   it("shows a formatter error without triggering a render loop", () => {
     useActivityStore.setState({ elapsedSeconds: -1 });
 
-    render(<DashboardPage />);
+    render(<TimerPage />);
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "入力値は 0 以上である必要があります",
@@ -41,7 +41,7 @@ describe("DashboardPage", () => {
       webApps: [],
     });
 
-    render(<DashboardPage />);
+    render(<TimerPage />);
 
     expect(screen.getByText("Google Docs")).toBeInTheDocument();
     expect(screen.getByText("セッション計測中")).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe("DashboardPage", () => {
       webApps: [],
     });
 
-    render(<DashboardPage />);
+    render(<TimerPage />);
 
     expect(screen.getByText("Google Docs")).toBeInTheDocument();
     expect(screen.getByText("セッション数: 2")).toBeInTheDocument();
