@@ -4,6 +4,7 @@ import {
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from '@tauri-apps/plugin-autostart';
+import { HourlyRateSettingsSection } from '../components/settings/HourlyRateSettingsSection';
 
 export function SettingsPage() {
   const [autostartEnabled, setAutostartEnabled] = useState(false);
@@ -63,6 +64,8 @@ export function SettingsPage() {
           <p role="alert">{autostartErrorMessage}</p>
         )}
       </section>
+
+      <HourlyRateSettingsSection />
 
       <section>
         <h3>Web Tracker</h3>

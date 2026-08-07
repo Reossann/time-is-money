@@ -63,6 +63,7 @@ pub fn run() {
             commands::activity::get_active_window_info,
             receive_web_app_url
         ])
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             #[cfg(desktop)]

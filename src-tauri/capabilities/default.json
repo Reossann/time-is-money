@@ -11,6 +11,11 @@
     "autostart:allow-is-enabled",
     "notification:default",
     "core:event:default",
-    "core:event:allow-listen"
+    "core:event:allow-listen",
+    "store:allow-load",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-reload",
+    "store:allow-save"
   ]
 }
