@@ -59,10 +59,13 @@ fn show_main_window(app: &AppHandle) {
 
 pub fn run() {
     tauri::Builder::default()
+        .manage(native_bridge::NativeBridgeState::default())
         .invoke_handler(tauri::generate_handler![
             commands::activity::get_active_window_info,
+            native_bridge::get_latest_native_web_app_event,
             receive_web_app_url
         ])
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             #[cfg(desktop)]

@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   disableAutostart: vi.fn(),
   enableAutostart: vi.fn(),
   isAutostartEnabled: vi.fn(),
+  loadHourlyRateSettings: vi.fn(),
+  saveHourlyRateSettings: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/plugin-autostart', () => ({
@@ -14,12 +16,34 @@ vi.mock('@tauri-apps/plugin-autostart', () => ({
   isEnabled: mocks.isAutostartEnabled,
 }));
 
+vi.mock('../repositories/hourlyRateSettingsRepository', () => ({
+  hourlyRateSettingsRepository: {
+    load: mocks.loadHourlyRateSettings,
+    save: mocks.saveHourlyRateSettings,
+  },
+}));
+
 import { SettingsPage } from './SettingsPage';
 
 describe('SettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isAutostartEnabled.mockResolvedValue(false);
+    mocks.loadHourlyRateSettings.mockResolvedValue({
+      schemaVersion: 1,
+      defaultHourlyRateYen: 0,
+      desktopApps: [],
+    });
+    mocks.saveHourlyRateSettings.mockImplementation(async (settings) => settings);
+  });
+
+  it('renders the hourly rate settings section once', async () => {
+    render(<SettingsPage />);
+
+    expect(
+      await screen.findByRole('heading', { name: '時給設定' }),
+    ).toBeInTheDocument();
+    expect(mocks.loadHourlyRateSettings).toHaveBeenCalledOnce();
   });
 
   it('toggles autostart on when checkbox is clicked', async () => {

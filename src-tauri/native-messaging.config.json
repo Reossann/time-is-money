@@ -2,6 +2,6 @@
   "hostName": "com.timeismoney.app",
   "description": "Time Is Money Native Messaging Host",
   "allowedOrigins": [
-    "chrome-extension://elcjmahcbellfifceafigamifbibonmd/"
+    "chrome-extension://cdoabncafaeaijdgbjioennfmebpgcih/"
   ]
 }

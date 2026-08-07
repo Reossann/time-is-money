@@ -23,9 +23,16 @@ async function updateUI() {
           return;
         }
 
-        // 監視状況を表示
+        const statusLabels = {
+          connected: "✅ アプリ接続済み",
+          monitoring: "⏳ 接続確認中",
+          "host-unregistered": "⚠️ Native Host未登録",
+          "app-unavailable": "⚠️ Time Is Moneyが未起動",
+          "send-failed": "⚠️ アプリへの送信失敗",
+        };
+
         statusElement.textContent = response.isMonitoring
-          ? "✅ 計測中"
+          ? (statusLabels[response.connectionState] ?? "⏳ 接続確認中")
           : "⏸ 停止中";
 
         // 現在のアプリを表示

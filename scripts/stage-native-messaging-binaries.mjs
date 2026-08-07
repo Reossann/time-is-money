@@ -2,31 +2,37 @@ import { cpSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { execFileSync } from "node:child_process";
-import js from "@eslint/js";
-import tsPlugin from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
-import globals from "globals";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = dirname(scriptDirectory);
-const releaseDirectory = join(repositoryRoot, "src-tauri", "target", "release");
+const args = process.argv.slice(2);
+const isDebug = args.length === 1 && args[0] === "--debug";
+
+if (args.length > 0 && !isDebug) {
+  throw new Error("Supported argument: --debug");
+}
+
+const profile = isDebug ? "debug" : "release";
+const outputDirectory = join(repositoryRoot, "src-tauri", "target", profile);
 const binariesDirectory = join(repositoryRoot, "src-tauri", "binaries");
 const binaries = ["native-messaging-host", "native-messaging-setup"];
+const cargoArgs = [
+  "build",
+  "--manifest-path",
+  "src-tauri/Cargo.toml",
+  "--bin",
+  "native-messaging-host",
+  "--bin",
+  "native-messaging-setup",
+];
+
+if (!isDebug) {
+  cargoArgs.splice(3, 0, "--release");
+}
 
 execFileSync(
   "cargo",
-  [
-    "build",
-    "--manifest-path",
-    "src-tauri/Cargo.toml",
-    "--release",
-    "--bin",
-    "native-messaging-host",
-    "--bin",
-    "native-messaging-setup",
-  ],
+  cargoArgs,
   {
     cwd: repositoryRoot,
     env: {
@@ -51,69 +57,9 @@ if (!targetTriple.endsWith("-windows-msvc")) {
 mkdirSync(binariesDirectory, { recursive: true });
 
 for (const binary of binaries) {
-  const source = join(releaseDirectory, `${binary}.exe`);
+  const source = join(outputDirectory, `${binary}.exe`);
   const destination = join(binariesDirectory, `${binary}-${targetTriple}.exe`);
 
   cpSync(source, destination);
-  console.log(`Staged ${binary} for ${targetTriple}.`);
+  console.log(`Staged ${binary} (${profile}) for ${targetTriple}.`);
 }
-
-export default [
-  {
-    ignores: ["dist/**", "src-tauri/target/**", "node_modules/**"],
-  },
-  js.configs.recommended,
-  {
-    files: ["extensions/webtime-tracker/**/*.js"],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.webextensions,
-      },
-    },
-    rules: {
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-    },
-  },
-  // ↓ 追加：Node.jsで実行するビルド/ユーティリティスクリプト用
-  {
-    files: ["scripts/**/*.{js,mjs,cjs}"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      globals: {
-        ...globals.node,
-      },
-    },
-  },
-  {
-    files: ["**/*.{ts,tsx}"],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module",
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
-    },
-    plugins: {
-      "@typescript-eslint": tsPlugin,
-      "react-hooks": reactHooks,
-      "react-refresh": reactRefresh,
-    },
-    rules: {
-      ...tsPlugin.configs.recommended.rules,
-      ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
-    },
-  },
-];

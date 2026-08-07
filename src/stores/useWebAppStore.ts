@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { WebApp, WebAppSession, WebAppUsageStats } from "../types/activity";
 
+export type NativeBridgeStatus = "waiting" | "connected" | "invalid-event";
+
 function createWebAppSession(webApp: WebApp, startedAt: number): WebAppSession {
   return {
     id: `session-${startedAt}-${Math.random()}`,
@@ -25,11 +27,19 @@ type WebAppStoreState = {
   
   // ウェブアプリ一覧
   webApps: WebApp[];
+
+  // Native Messaging連携状態
+  nativeBridgeStatus: NativeBridgeStatus;
+  lastNativeEventAt: number | null;
   
   // アクション
   setCurrentWebApp: (webApp: WebApp) => void;
   endCurrentSession: () => void;
   addWebApp: (webApp: WebApp) => void;
+  setNativeBridgeStatus: (
+    status: NativeBridgeStatus,
+    receivedAt?: number,
+  ) => void;
   resetUsageStats: () => void;
 };
 
@@ -37,6 +47,8 @@ export const useWebAppStore = create<WebAppStoreState>((set, get) => ({
   currentSession: null,
   usageStats: [],
   webApps: [],
+  nativeBridgeStatus: "waiting",
+  lastNativeEventAt: null,
 
   setCurrentWebApp: (webApp: WebApp) => {
     const { currentSession } = get();
@@ -125,6 +137,13 @@ export const useWebAppStore = create<WebAppStoreState>((set, get) => ({
       return {
         webApps: exists ? state.webApps : [...state.webApps, webApp],
       };
+    });
+  },
+
+  setNativeBridgeStatus: (status, receivedAt = Date.now()) => {
+    set({
+      nativeBridgeStatus: status,
+      lastNativeEventAt: status === "waiting" ? null : receivedAt,
     });
   },
 

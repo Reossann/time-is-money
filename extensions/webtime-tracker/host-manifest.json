@@ -4,6 +4,6 @@
   "path": "REPLACE_WITH_NATIVE_MESSAGING_HOST_EXE",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://elcjmahcbellfifceafigamifbibonmd/"
+    "chrome-extension://cdoabncafaeaijdgbjioennfmebpgcih/"
   ]
 }

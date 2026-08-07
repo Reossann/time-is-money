@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   NATIVE_MESSAGE_MAX_BYTES,
+  NATIVE_MESSAGE_STOP_TYPE,
   NATIVE_MESSAGE_TYPE,
   nativeMessageErrorCode,
   sanitizeNativeMessageUrl,
@@ -47,6 +48,21 @@ describe("validateNativeMessage", () => {
         type: NATIVE_MESSAGE_TYPE,
         url: "https://docs.google.com/document/d/example",
         sanitizedUrl: "https://docs.google.com/document/d/example",
+        timestamp: 1_700_000_000_000,
+      },
+    });
+  });
+
+  it("accepts a TRACKING_STOP payload without a URL", () => {
+    expect(
+      validateNativeMessage({
+        type: NATIVE_MESSAGE_STOP_TYPE,
+        timestamp: 1_700_000_000_000,
+      }),
+    ).toEqual({
+      ok: true,
+      value: {
+        type: NATIVE_MESSAGE_STOP_TYPE,
         timestamp: 1_700_000_000_000,
       },
     });

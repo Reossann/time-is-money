@@ -38,7 +38,18 @@ export const activeWindowInfoSchema = z.object({
   processId: z.number().int().positive().max(0xffff_ffff),
 });
 
-export const nativeWebAppChangeSchema = z.object({
-  url: z.string().url(),
-  timestamp: z.number().int().nonnegative(),
-});
+export const nativeWebAppEventSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("URL_CHANGE"),
+      url: z.string().url(),
+      timestamp: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("TRACKING_STOP"),
+      timestamp: z.number().int().positive(),
+    })
+    .strict(),
+]);

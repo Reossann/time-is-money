@@ -60,7 +60,13 @@ export type WebAppUsageStats = {
   sessionCount: number;          // セッション数
 };
 
-export type NativeWebAppChange = {
-  url: string;
-  timestamp: number;
-};
+export type NativeWebAppEvent =
+  | {
+      type: "URL_CHANGE";
+      url: string;
+      timestamp: number;
+    }
+  | {
+      type: "TRACKING_STOP";
+      timestamp: number;
+    };
