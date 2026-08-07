@@ -10,6 +10,7 @@ import { GraphPage } from "./pages/GraphPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { startNativeWebAppBridgeListener } from "./services/nativeBridgeService";
 import type { NavigationId } from "./constants/navigation";
+import { isTauri } from "@tauri-apps/api/core";
 
 const pageMap: Record<NavigationId, React.ReactNode> = {
   timer: null, // TimerPage は特別な props を持つため下で個別に処理
@@ -95,3 +96,25 @@ export function App() {
     </AppLayout>
   );
 }
+
+useEffect(() => {
+  console.log("🔵 [App] isTauri():", isTauri());
+  let unlisten: (() => void) | undefined;
+  let isDisposed = false;
+
+  console.log("🔵 [App] リスナー登録開始...");
+
+  startNativeWebAppBridgeListener()
+    .then((dispose) => {
+      console.log("🟢 [App] リスナー登録成功！");
+      // ...
+    })
+    .catch((error) => {
+      console.error("❌ [App] リスナー登録失敗:", error);
+    });
+
+  return () => {
+    isDisposed = true;
+    unlisten?.();
+  };
+}, []);
