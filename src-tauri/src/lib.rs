@@ -13,6 +13,8 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 
+use services::notification_service::{pick_random_message, DEFAULT_TONE};
+
 const APP_ICON: Image<'_> = tauri::include_image!("icons/icon.png");
 
 /**
@@ -123,14 +125,16 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                // TODO: 活動計測が実装されたら、固定60秒ではなく実際の通知条件に接続する。
-                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                // TODO: 活動計測が実装されたら、固定タイマーではなく実際の通知条件に接続する。（動作確認用に5秒に変更）
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+                let body = pick_random_message(DEFAULT_TONE);
 
                 if let Err(error) = app_handle
                     .notification()
                     .builder()
                     .title("Time Is Money")
-                    .body("アプリを起動して1分が経ちました")
+                    .body(body)
                     .show()
                 {
                     eprintln!("通知送信に失敗しました: {error}");
