@@ -12,8 +12,7 @@
   "app": {
     "security": {
       "capabilities": [
-        "default",
-        "tauri:core:event:allow-*"
+        "default"
       ]
     }
   },
