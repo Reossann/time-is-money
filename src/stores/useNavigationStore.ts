@@ -8,6 +8,6 @@ type NavigationState = {
 };
 
 export const useNavigationStore = create<NavigationState>((set) => ({
-  currentPage: "dashboard",
+  currentPage: "timer",
   setCurrentPage: (page) => set({ currentPage: page }),
 }));
