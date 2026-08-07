@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { detectWebApp, formatSessionDuration } from "./webAppService";
 
 describe("detectWebApp", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   it.each([
     ["https://docs.google.com/document/d/example", "google-docs"],
     ["https://docs.google.com/spreadsheets/d/example", "google-sheets"],
@@ -24,7 +27,14 @@ describe("detectWebApp", () => {
   });
 
   it("returns null for an invalid URL", () => {
-    expect(detectWebApp("not a url")).toBeNull();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const privateUrl = "not a url https://example.com/private?token=secret";
+
+    expect(detectWebApp(privateUrl)).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "detectWebApp: URLの解析に失敗しました",
+    );
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(privateUrl);
   });
 });
 

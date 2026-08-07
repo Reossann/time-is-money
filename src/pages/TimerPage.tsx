@@ -2,6 +2,7 @@ import { useActivityStore } from "../stores/useActivityStore";
 import { useWebAppStore } from "../stores/useWebAppStore";
 import { formatTime } from "../services/activityService";
 import { formatSessionDuration } from "../services/webAppService";
+import { AppUsageTrackingDiagnostics } from "../components/diagnostics/AppUsageTrackingDiagnostics";
 
 type TimerPageProps = {
   onPreviewResultFlow?: () => void;
@@ -61,6 +62,8 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
           </ul>
         )}
       </section>
+
+      {import.meta.env.DEV ? <AppUsageTrackingDiagnostics /> : null}
 
       {import.meta.env.DEV && onPreviewResultFlow ? (
         <section className="result-preview-entry" aria-label="開発用機能">
