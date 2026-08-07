@@ -8,8 +8,10 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:tauri": "npm run native-messaging:dev && vite",
     "build": "tsc --noEmit && vite build",
     "build:native-messaging": "node scripts/stage-native-messaging-binaries.mjs",
+    "native-messaging:dev": "powershell -ExecutionPolicy Bypass -File scripts/register-native-messaging-dev.ps1",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",
