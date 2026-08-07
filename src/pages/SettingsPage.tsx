@@ -4,16 +4,7 @@ import {
   disable as disableAutostart,
   isEnabled as isAutostartEnabled,
 } from '@tauri-apps/plugin-autostart';
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from '@tauri-apps/plugin-notification';
-
-type NotificationFeedback = {
-  type: 'success' | 'error';
-  message: string;
-};
+import { HourlyRateSettingsSection } from '../components/settings/HourlyRateSettingsSection';
 
 export function SettingsPage() {
   const [autostartEnabled, setAutostartEnabled] = useState(false);
@@ -21,9 +12,6 @@ export function SettingsPage() {
   const [autostartErrorMessage, setAutostartErrorMessage] = useState<
     string | null
   >(null);
-  const [notificationLoading, setNotificationLoading] = useState(false);
-  const [notificationFeedback, setNotificationFeedback] =
-    useState<NotificationFeedback | null>(null);
 
   useEffect(() => {
     const checkAutostartStatus = async () => {
@@ -56,43 +44,6 @@ export function SettingsPage() {
     }
   };
 
-  const handleTestNotification = async () => {
-    setNotificationLoading(true);
-    setNotificationFeedback(null);
-
-    try {
-      let permissionGranted = await isPermissionGranted();
-
-      if (!permissionGranted) {
-        permissionGranted = (await requestPermission()) === 'granted';
-      }
-
-      if (!permissionGranted) {
-        setNotificationFeedback({
-          type: 'error',
-          message: '通知が許可されていません。',
-        });
-        return;
-      }
-
-      sendNotification({
-        title: 'Time Is Money',
-        body: 'テスト通知です',
-      });
-      setNotificationFeedback({
-        type: 'success',
-        message: 'テスト通知を送信しました。',
-      });
-    } catch {
-      setNotificationFeedback({
-        type: 'error',
-        message: '通知を送信できませんでした。',
-      });
-    } finally {
-      setNotificationLoading(false);
-    }
-  };
-
   return (
     <main className="page">
       <h2>設定</h2>
@@ -114,22 +65,7 @@ export function SettingsPage() {
         )}
       </section>
 
-      <section>
-        <h3>通知</h3>
-        <p>OSの通知機能が利用できるかテストします。</p>
-        <button
-          type="button"
-          onClick={handleTestNotification}
-          disabled={notificationLoading}
-        >
-          {notificationLoading ? '確認中...' : '通知をテスト送信'}
-        </button>
-        {notificationFeedback && (
-          <p role={notificationFeedback.type === 'error' ? 'alert' : 'status'}>
-            {notificationFeedback.message}
-          </p>
-        )}
-      </section>
+      <HourlyRateSettingsSection />
 
       <section>
         <h3>Web Tracker</h3>

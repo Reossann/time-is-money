@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,9 +6,8 @@ const mocks = vi.hoisted(() => ({
   disableAutostart: vi.fn(),
   enableAutostart: vi.fn(),
   isAutostartEnabled: vi.fn(),
-  isPermissionGranted: vi.fn(),
-  requestPermission: vi.fn(),
-  sendNotification: vi.fn(),
+  loadHourlyRateSettings: vi.fn(),
+  saveHourlyRateSettings: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/plugin-autostart', () => ({
@@ -17,54 +16,59 @@ vi.mock('@tauri-apps/plugin-autostart', () => ({
   isEnabled: mocks.isAutostartEnabled,
 }));
 
-vi.mock('@tauri-apps/plugin-notification', () => ({
-  isPermissionGranted: mocks.isPermissionGranted,
-  requestPermission: mocks.requestPermission,
-  sendNotification: mocks.sendNotification,
+vi.mock('../repositories/hourlyRateSettingsRepository', () => ({
+  hourlyRateSettingsRepository: {
+    load: mocks.loadHourlyRateSettings,
+    save: mocks.saveHourlyRateSettings,
+  },
 }));
 
 import { SettingsPage } from './SettingsPage';
 
-describe('SettingsPage notifications', () => {
+describe('SettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isAutostartEnabled.mockResolvedValue(false);
-  });
-
-  it('requests permission before sending a notification', async () => {
-    const user = userEvent.setup();
-    mocks.isPermissionGranted.mockResolvedValue(false);
-    mocks.requestPermission.mockResolvedValue('granted');
-    render(<SettingsPage />);
-
-    await user.click(
-      screen.getByRole('button', { name: '通知をテスト送信' }),
-    );
-
-    expect(mocks.requestPermission).toHaveBeenCalledOnce();
-    expect(mocks.sendNotification).toHaveBeenCalledWith({
-      title: 'Time Is Money',
-      body: 'テスト通知です',
+    mocks.loadHourlyRateSettings.mockResolvedValue({
+      schemaVersion: 1,
+      defaultHourlyRateYen: 0,
+      desktopApps: [],
     });
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'テスト通知を送信しました。',
-    );
+    mocks.saveHourlyRateSettings.mockImplementation(async (settings) => settings);
   });
 
-  it('does not send when notification permission is denied', async () => {
+  it('renders the hourly rate settings section once', async () => {
+    render(<SettingsPage />);
+
+    expect(
+      await screen.findByRole('heading', { name: '時給設定' }),
+    ).toBeInTheDocument();
+    expect(mocks.loadHourlyRateSettings).toHaveBeenCalledOnce();
+  });
+
+  it('toggles autostart on when checkbox is clicked', async () => {
     const user = userEvent.setup();
-    mocks.isPermissionGranted.mockResolvedValue(false);
-    mocks.requestPermission.mockResolvedValue('denied');
+    mocks.enableAutostart.mockResolvedValue(undefined);
     render(<SettingsPage />);
 
     await user.click(
-      screen.getByRole('button', { name: '通知をテスト送信' }),
+      screen.getByRole('checkbox'),
     );
 
-    expect(mocks.sendNotification).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      '通知が許可されていません。',
+    expect(mocks.enableAutostart).toHaveBeenCalledOnce();
+  });
+
+  it('shows an error message when autostart toggle fails', async () => {
+    const user = userEvent.setup();
+    mocks.enableAutostart.mockRejectedValue(new Error('failed'));
+    render(<SettingsPage />);
+
+    await user.click(
+      screen.getByRole('checkbox'),
     );
-    await waitFor(() => expect(mocks.isAutostartEnabled).toHaveBeenCalled());
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '自動起動の設定を変更できませんでした。',
+    );
   });
 });
