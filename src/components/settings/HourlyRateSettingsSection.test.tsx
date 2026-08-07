@@ -1,15 +1,23 @@
 import { StrictMode } from "react";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HourlyRateSettingsRepository } from "../../repositories/hourlyRateSettingsRepository";
 import {
   createDefaultHourlyRateSettings,
+  registerDesktopApp,
   setDefaultHourlyRateYen,
 } from "../../services/hourlyRateSettingsService";
+import type { ActiveWindowInfo } from "../../types/activity";
 import type { HourlyRateSettings } from "../../types/hourlyRateSettings";
 import { HourlyRateSettingsSection } from "./HourlyRateSettingsSection";
+
+const capturedCodeWindow = {
+  processName: "Code.exe",
+  windowTitle: "PRIVATE project name - Visual Studio Code",
+  processId: 42_424,
+} as const satisfies ActiveWindowInfo;
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -36,17 +44,57 @@ function createRepository(
   };
 }
 
-async function renderReady(repository = createRepository()) {
+async function renderReady(
+  repository = createRepository(),
+  captureActiveWindow: () => Promise<ActiveWindowInfo | null> = vi
+    .fn()
+    .mockResolvedValue(null),
+) {
   const user = userEvent.setup();
-  render(<HourlyRateSettingsSection repository={repository} />);
+  const renderResult = render(
+    <HourlyRateSettingsSection
+      repository={repository}
+      captureActiveWindow={captureActiveWindow}
+    />,
+  );
   const input = await screen.findByRole("spinbutton", {
     name: "デフォルト時給（円/時）",
   });
 
-  return { input, repository, user };
+  return { input, repository, unmount: renderResult.unmount, user };
+}
+
+async function renderAfterCapture(
+  captureActiveWindow: ReturnType<
+    typeof vi.fn<() => Promise<ActiveWindowInfo | null>>
+  >,
+  repository = createRepository(),
+) {
+  await renderReady(repository, captureActiveWindow);
+  vi.useFakeTimers();
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "3秒後に前面アプリを取得" }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(3_000);
+  });
+
+  return { repository };
+}
+
+async function clickAndFlush(element: HTMLElement) {
+  await act(async () => {
+    fireEvent.click(element);
+    await Promise.resolve();
+  });
 }
 
 describe("HourlyRateSettingsSection", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows loading before the repository load finishes", () => {
     const deferred = createDeferred<HourlyRateSettings>();
     const repository = createRepository();
@@ -212,5 +260,208 @@ describe("HourlyRateSettingsSection", () => {
       createDefaultHourlyRateSettings(),
     );
     expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it("waits three seconds, announces the countdown, and captures once", async () => {
+    const captureActiveWindow = vi.fn().mockResolvedValue(capturedCodeWindow);
+    await renderReady(createRepository(), captureActiveWindow);
+    vi.useFakeTimers();
+    const captureButton = screen.getByRole("button", {
+      name: "3秒後に前面アプリを取得",
+    });
+
+    fireEvent.click(captureButton);
+
+    expect(captureButton).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "3秒後に取得します。対象アプリへ切り替えてください。",
+    );
+    expect(captureActiveWindow).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("2秒後に取得します。");
+    expect(captureActiveWindow).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("1秒後に取得します。");
+    expect(captureActiveWindow).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(captureActiveWindow).toHaveBeenCalledOnce();
+    expect(screen.getByText("Code.exe")).toBeInTheDocument();
+  });
+
+  it("keeps only the process name and saves after confirmation", async () => {
+    const captureActiveWindow = vi.fn().mockResolvedValue(capturedCodeWindow);
+    const { repository } = await renderAfterCapture(captureActiveWindow);
+
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(screen.getByText("Code.exe")).toBeInTheDocument();
+    expect(
+      screen.queryByText(capturedCodeWindow.windowTitle),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(String(capturedCodeWindow.processId)),
+    ).not.toBeInTheDocument();
+
+    await clickAndFlush(screen.getByRole("button", { name: "追加" }));
+
+    expect(repository.save).toHaveBeenCalledOnce();
+    const savedSettings = repository.save.mock.calls[0][0];
+    expect(savedSettings.desktopApps).toEqual([
+      {
+        appId: "code.exe",
+        processName: "Code.exe",
+        hourlyRateYen: null,
+      },
+    ]);
+    expect(JSON.stringify(savedSettings)).not.toContain(
+      capturedCodeWindow.windowTitle,
+    );
+    expect(JSON.stringify(savedSettings)).not.toContain(
+      String(capturedCodeWindow.processId),
+    );
+    expect(screen.getByRole("list", { name: "登録済みアプリ" })).toHaveTextContent(
+      "Code.exe",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "アプリを時給設定へ追加しました。",
+    );
+  });
+
+  it("cancels a candidate without saving it", async () => {
+    const captureActiveWindow = vi.fn().mockResolvedValue(capturedCodeWindow);
+    const { repository } = await renderAfterCapture(captureActiveWindow);
+
+    await clickAndFlush(screen.getByRole("button", { name: "取り消し" }));
+
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(screen.queryByText("Code.exe")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "アプリの追加を取り消しました。",
+    );
+  });
+
+  it("reports a case-insensitive duplicate without saving", async () => {
+    const settings = registerDesktopApp(
+      "Code.exe",
+      createDefaultHourlyRateSettings(),
+    );
+    const repository = createRepository(settings);
+    const captureActiveWindow = vi.fn().mockResolvedValue({
+      ...capturedCodeWindow,
+      processName: "CODE.EXE",
+    });
+    await renderAfterCapture(captureActiveWindow, repository);
+
+    await clickAndFlush(screen.getByRole("button", { name: "追加" }));
+
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "このアプリは登録済みです。",
+    );
+    expect(settings.desktopApps).toHaveLength(1);
+  });
+
+  it("shows a safe error when there is no foreground window", async () => {
+    const captureActiveWindow = vi.fn().mockResolvedValue(null);
+
+    await renderAfterCapture(captureActiveWindow);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "前面アプリを取得できませんでした。対象アプリを前面にして再度お試しください。",
+    );
+    expect(screen.queryByRole("button", { name: "追加" })).not.toBeInTheDocument();
+  });
+
+  it("hides Command error details from the user", async () => {
+    const privateError = "PRIVATE window title from Command";
+    const captureActiveWindow = vi.fn().mockRejectedValue(new Error(privateError));
+
+    await renderAfterCapture(captureActiveWindow);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "前面アプリの取得に失敗しました。もう一度お試しください。",
+    );
+    expect(screen.queryByText(privateError)).not.toBeInTheDocument();
+  });
+
+  it("rejects an invalid process name before creating a candidate", async () => {
+    const captureActiveWindow = vi.fn().mockResolvedValue({
+      ...capturedCodeWindow,
+      processName: "C:\\Private\\Code.exe",
+    });
+
+    await renderAfterCapture(captureActiveWindow);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "取得したアプリを登録できません。別のアプリでお試しください。",
+    );
+    expect(screen.queryByRole("button", { name: "追加" })).not.toBeInTheDocument();
+    expect(screen.queryByText("C:\\Private\\Code.exe")).not.toBeInTheDocument();
+  });
+
+  it("keeps the candidate when app registration save fails", async () => {
+    const repository = createRepository();
+    repository.save.mockRejectedValue(new Error("PRIVATE store failure"));
+    const captureActiveWindow = vi.fn().mockResolvedValue(capturedCodeWindow);
+    await renderAfterCapture(captureActiveWindow, repository);
+
+    await clickAndFlush(screen.getByRole("button", { name: "追加" }));
+
+    expect(screen.getByText("Code.exe")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "アプリを追加できませんでした。もう一度お試しください。",
+    );
+    expect(screen.getByText("登録済みアプリはありません。")).toBeInTheDocument();
+  });
+
+  it("clears the old candidate when capturing again", async () => {
+    const captureActiveWindow = vi
+      .fn<() => Promise<ActiveWindowInfo | null>>()
+      .mockResolvedValueOnce(capturedCodeWindow)
+      .mockResolvedValueOnce({
+        processName: "notepad.exe",
+        windowTitle: "PRIVATE note",
+        processId: 7_777,
+      });
+    await renderAfterCapture(captureActiveWindow);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "3秒後に前面アプリを取得" }),
+    );
+    expect(screen.queryByText("Code.exe")).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000);
+    });
+
+    expect(captureActiveWindow).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("notepad.exe")).toBeInTheDocument();
+  });
+
+  it("clears the countdown timer when unmounted", async () => {
+    const captureActiveWindow = vi.fn().mockResolvedValue(capturedCodeWindow);
+    const { unmount } = await renderReady(
+      createRepository(),
+      captureActiveWindow,
+    );
+    vi.useFakeTimers();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "3秒後に前面アプリを取得" }),
+    );
+    unmount();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000);
+    });
+    expect(captureActiveWindow).not.toHaveBeenCalled();
   });
 });
