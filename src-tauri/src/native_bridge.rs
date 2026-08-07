@@ -153,6 +153,7 @@ fn handle_connection(app_handle: &tauri::AppHandle, stream: &mut TcpStream) -> i
             NativeBridgeAck::error(format!("invalid native bridge payload: {error}"))
         }
     };
+    return Ok(()); 
 }
 
 #[cfg(test)]
