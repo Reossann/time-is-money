@@ -177,8 +177,7 @@ impl AppUsageTracker {
             TrackerLifecycle::Running(session) => {
                 ensure_session_matches(&session.session_id, session_id)?;
                 let offset = boundary_offset(session.started_at, captured_at)?;
-                let usage = session
-                    .accumulator
+                let usage = accumulator_at_boundary(session, offset)?
                     .snapshot_at(offset)
                     .map_err(map_accumulator_error)?;
                 Ok(TrackingSnapshot::Running(RunningTrackingSnapshot {
@@ -215,7 +214,7 @@ impl AppUsageTracker {
                 let stop_offset = boundary_offset(session.started_at, ended_at)?;
 
                 // Cloneして確定することで、boundary error時にrunning stateを壊さない。
-                let mut accumulator = session.accumulator.clone();
+                let mut accumulator = accumulator_at_boundary(session, stop_offset)?;
                 let usage = accumulator
                     .finalize(stop_offset)
                     .map_err(map_accumulator_error)?;
@@ -280,6 +279,7 @@ impl AppUsageTracker {
             started_at,
             generation,
             accumulator: AppUsageAccumulator::new(),
+            observations: Vec::new(),
             worker: None,
         });
 
@@ -342,7 +342,14 @@ struct RunningSession {
     started_at: i64,
     generation: u64,
     accumulator: AppUsageAccumulator,
+    observations: Vec<RecordedObservation>,
     worker: Option<JoinHandle<()>>,
+}
+
+#[derive(Debug, Clone)]
+struct RecordedObservation {
+    offset_milliseconds: i128,
+    observation: ProcessObservation,
 }
 
 struct FinalizedSession {
@@ -429,10 +436,48 @@ fn apply_worker_sample(
         return false;
     }
 
-    session
+    if session
         .accumulator
-        .observe(offset_milliseconds, observation)
-        .is_ok()
+        .observe(offset_milliseconds, observation.clone())
+        .is_err()
+    {
+        return false;
+    }
+    session.observations.push(RecordedObservation {
+        offset_milliseconds,
+        observation,
+    });
+    true
+}
+
+///
+/// frontendが境界を確定してからCommandがmutexを取るまでにworker sampleが先行しても、
+/// 指定境界より後の観測を除外したaccumulatorを返す。通常経路は現在値のcloneだけで済み、
+/// raceまたは固定境界でのretry時だけ観測履歴をreplayする。
+fn accumulator_at_boundary(
+    session: &RunningSession,
+    boundary_offset_milliseconds: i128,
+) -> Result<AppUsageAccumulator, AppUsageTrackerError> {
+    let has_observation_after_boundary = session
+        .observations
+        .last()
+        .map(|record| record.offset_milliseconds > boundary_offset_milliseconds)
+        .unwrap_or(false);
+    if !has_observation_after_boundary {
+        return Ok(session.accumulator.clone());
+    }
+
+    let mut accumulator = AppUsageAccumulator::new();
+    for record in session
+        .observations
+        .iter()
+        .take_while(|record| record.offset_milliseconds <= boundary_offset_milliseconds)
+    {
+        accumulator
+            .observe(record.offset_milliseconds, record.observation.clone())
+            .map_err(map_accumulator_error)?;
+    }
+    Ok(accumulator)
 }
 
 fn process_observation(
@@ -680,6 +725,35 @@ mod tests {
             tracker.snapshot("session-a", 9_999).unwrap(),
             TrackingSnapshot::Final(first)
         );
+    }
+
+    #[test]
+    fn app_usage_tracker_replays_to_the_requested_boundary_after_a_late_sample() {
+        let source = Arc::new(CountingSource::new(Ok(None)));
+        let tracker = tracker(source);
+        start_without_worker(&tracker, "session-a", 1_000);
+        let generation = running_generation(&tracker);
+        assert!(apply(&tracker, generation, 0, Ok(Some("A.exe".to_owned()))));
+        assert!(apply(
+            &tracker,
+            generation,
+            100,
+            Ok(Some("late.exe".to_owned()))
+        ));
+
+        let TrackingSnapshot::Running(preview) = tracker.snapshot("session-a", 1_050).unwrap()
+        else {
+            panic!("running preview expected");
+        };
+        assert_eq!(preview.usage.duration_milliseconds, 50);
+        assert_eq!(preview.usage.apps[0].process_name, "A.exe");
+        assert_eq!(preview.usage.apps[0].duration_milliseconds, 50);
+
+        let stopped = tracker.stop("session-a", 1_050).unwrap();
+        assert_eq!(stopped.ended_at, 1_050);
+        assert_eq!(stopped.usage.duration_milliseconds, 50);
+        assert_eq!(app_duration(&stopped, "A.exe"), Some(50));
+        assert_eq!(app_duration(&stopped, "late.exe"), None);
     }
 
     #[test]

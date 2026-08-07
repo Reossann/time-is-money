@@ -5,6 +5,7 @@ import sharedFixture from "../../fixtures/contracts/app-usage-snapshot-v1.json";
 import type { AppUsageSnapshotWire } from "../utils/appUsageTrackingSchemas";
 import {
   createAppUsageSnapshot,
+  getAppUsageTrackingErrorCode,
   getAppUsageTrackingSnapshot,
   startAppUsageTracking,
   stopAppUsageTracking,
@@ -80,6 +81,21 @@ describe("app usage tracking Commands", () => {
 
     await expect(startAppUsageTracking("session-a", 1_000)).rejects.toBe(
       commandError,
+    );
+  });
+
+  it("exposes only an allow-listed error code", () => {
+    expect(
+      getAppUsageTrackingErrorCode({ code: "SESSION_MISMATCH" }),
+    ).toBe("SESSION_MISMATCH");
+    expect(
+      getAppUsageTrackingErrorCode({
+        code: "SESSION_MISMATCH",
+        windowTitle: "private title",
+      }),
+    ).toBe("INTERNAL");
+    expect(getAppUsageTrackingErrorCode(new Error("private path"))).toBe(
+      "INTERNAL",
     );
   });
 });

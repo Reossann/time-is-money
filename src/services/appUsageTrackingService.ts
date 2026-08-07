@@ -40,6 +40,23 @@ const trackingStopRequestSchema = z
   })
   .strict();
 
+const appUsageTrackingErrorCodeSchema = z.enum([
+  "TRACKING_ALREADY_RUNNING",
+  "SESSION_MISMATCH",
+  "STOP_BOUNDARY_CONFLICT",
+  "TRACKING_NOT_RUNNING",
+  "INVALID_BOUNDARY",
+  "INTERNAL",
+]);
+
+const appUsageTrackingCommandErrorSchema = z
+  .object({ code: appUsageTrackingErrorCodeSchema })
+  .strict();
+
+export type AppUsageTrackingErrorCode = z.infer<
+  typeof appUsageTrackingErrorCodeSchema
+>;
+
 type AggregatedUsage = {
   processName: string;
   durationMilliseconds: number;
@@ -144,4 +161,15 @@ export async function stopAppUsageTracking(
     args,
   );
   return createAppUsageSnapshot(wire);
+}
+
+/**
+ * Tauriから返る値のうち、画面へ公開してよい安定codeだけを取り出す。
+ * 未知の例外や追加fieldを含む値は、詳細を漏らさずINTERNALへ畳み込む。
+ */
+export function getAppUsageTrackingErrorCode(
+  error: unknown,
+): AppUsageTrackingErrorCode {
+  const parsed = appUsageTrackingCommandErrorSchema.safeParse(error);
+  return parsed.success ? parsed.data.code : "INTERNAL";
 }
