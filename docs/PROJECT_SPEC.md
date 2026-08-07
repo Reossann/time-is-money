@@ -7,8 +7,8 @@
 - 解決したい課題: 何にどれだけ時間を使ったかを感覚ではなく数値で把握しにくいこと。
 - 想定ユーザー: Windows PC で仕事や学習をしている個人ユーザー。
 - 将来的な完成イメージ: 前面アプリやサイトの利用時間を自動で集計し、金額・カテゴリ・通知・履歴で確認できるデスクトップアプリ。
-- 現在実装済みの範囲: 4画面とナビゲーション、アプリ起動からの経過時間表示、自動起動設定、テスト通知、起動1分後の仮通知、システムトレイ、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・解決、Tauri Command、型・値検証付きフロントサービス。
-- 現在未実装の範囲: 前面ウィンドウの継続監視、アプリ別利用時間の計測、ウィンドウ切り替え検知、SQLiteへの保存、分類ルールの作成・適用、活動履歴表示、実際の利用条件に基づく通知、集計、グラフ、ブラウザ拡張機能、外部通信。
+- 現在実装済みの範囲: 4画面とナビゲーション、アプリ起動からの経過時間表示、自動起動設定、テスト通知、起動1分後の仮通知、システムトレイ、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・解決、Tauri Command、型・値検証付きフロントサービス、SQLite接続・埋込みmigration基盤。
+- 現在未実装の範囲: 前面ウィンドウの継続監視、アプリ別利用時間の計測、ウィンドウ切り替え検知、SQLiteのdomain schemaと履歴保存、分類ルールの作成・適用、活動履歴表示、実際の利用条件に基づく通知、集計、グラフ、ブラウザ拡張機能、外部通信。
 
 ## 2. 使用技術
 
@@ -61,10 +61,11 @@
 
 - 何か: 埋め込み型の軽量データベース。
 - 一般的な用途: ローカル保存、設定管理、履歴管理。
-- このアプリでの担当: 将来の活動履歴、集計、分類ルールの端末内保存。現在の小規模な時給設定はTauri Storeへ分離する。
-- 採用理由: 外部サーバーを使わずにデータを端末内へ保存できる。
-- 現時点の導入状況: 未導入。
-- 導入する予定の段階: 履歴保存の実装段階。
+- このアプリでの担当: 将来の確定済みセッション履歴とアプリ別明細の端末内正本。現在の小規模な時給設定はTauri Storeへ分離する。
+- 採用理由: 外部サーバーを使わず、transactionとforeign keyを利用できる端末内保存を構築できるため。
+- 現時点の導入状況: Rust `sqlx`による接続、app data directoryへのDB作成、埋込みmigration適用まで導入済み。domain tableは未作成。
+- DB file: Tauriが解決するapp data directory内の`time-is-money.sqlite3`。絶対pathはlogやerrorへ出さない。
+- 接続設定: foreign keyを有効化し、busy timeoutは5秒、file DBはWAL、最大接続数は5。SQL statement loggingは無効化する。
 
 ### Zustand
 
@@ -84,14 +85,13 @@
 - 現時点の導入状況: 導入済み。
 - 導入する予定の段階: 雛形の段階からスキーマを準備する。
 
-### Tauri SQL Plugin
+### SQLx
 
-- 何か: Tauri から SQL ベースの保存処理を扱うためのプラグイン。
-- 一般的な用途: ローカル DB へのアクセス。
-- このアプリでの担当: 将来的な SQLite への保存と参照。
-- 採用理由: Rust 側で直接 SQL 取り回しを抱えすぎず、Tauri 側の仕組みに寄せられる可能性があるため。
-- 現時点の導入状況: 未導入。
-- 導入する予定の段階: SQLite 永続化を実装する段階。
+- 何か: Rustから複数のSQL databaseを非同期に扱うlibrary。このアプリではSQLite driverだけを利用する。
+- このアプリでの担当: SQLite pool、connection option、埋込みmigration、後続Phaseのtransactionとrepository。
+- 採用理由: 親sessionと複数明細をRust側の一つのtransactionで保存でき、webviewへ汎用SQL実行権限を公開せずに済むため。
+- 現時点の導入状況: v0.9を`default-features = false`で導入し、`runtime-tokio / sqlite-bundled / migrate / macros`だけを有効化している。
+- Tauri SQL Pluginを採用しない理由: JavaScriptへ`execute / select`の汎用SQL境界を作らず、DB lifecycle・migration・error変換をRustへ一元化するため。
 
 ### Tauri Store Plugin
 
@@ -151,9 +151,10 @@
 ## 3. アーキテクチャ
 
 - React・TypeScript 側が担当する処理: 画面表示、ナビゲーション、アプリ起動からの経過時間状態、自動起動設定、テスト通知、時給設定の検証・解決・repository、サービス層を通したCommand呼び出しと実行時検証。
-- Rust 側が担当する処理: Tauriウィンドウ制御、Windows APIによる前面ウィンドウ情報の単発取得、Tauri Command、Store Plugin初期化、システムトレイ、起動1分後の仮通知。
+- Rust 側が担当する処理: Tauriウィンドウ制御、Windows APIによる前面ウィンドウ情報の単発取得、Tauri Command、Store Plugin初期化、SQLite初期化・migration、システムトレイ、起動1分後の仮通知。
 - Tauri Command の呼び出し構造: `getActiveWindowInfo()` が `@tauri-apps/api` の `invoke("get_active_window_info")` を呼び、戻り値をZodで検証する。Dashboardからはまだ呼び出していない。
-- 将来的な SQLite 保存の流れ: UI で設定や分類結果を更新し、Rust 側のサービスが SQLite へ保存する予定。
+- SQLite初期化の流れ: Tauri setupの先頭でapp data directoryを作成し、`time-is-money.sqlite3`へ接続して全migrationを適用する。成功後だけ`DatabaseState`を登録し、その後に自動起動・tray等を初期化する。失敗時はDBを削除せず起動を中止する。
+- 将来的な履歴保存の流れ: 確定済み`SessionResult`を用途別Tauri CommandからRust repositoryへ渡し、transactionでSQLiteへ保存する予定。Phase 1では保存Commandを公開しない。
 - 前面ウィンドウ取得の流れ: Rust側のplatformモジュールがWindows APIから情報を取得し、登録済みCommand経由でフロントサービスへ返す。
 - 現在のタイマー表示の流れ: `App.tsx` が起動時刻をZustandへ保存し、1秒ごとに実経過時間を同期してDashboardへ表示する。この値はアプリ別の利用時間ではない。
 - 現在の時給設定の流れ: Settings UIがrepositoryからversion 1設定を読み、Zod検証後の値だけを表示する。保存時は純粋serviceで新しい設定を作り、repositoryが`settings.json`の`hourly-rate-settings-v1`へ書き込む。
@@ -175,7 +176,7 @@ flowchart LR
   RATE --> MONEY[Money Calculation Service]
   CMD --> RUST[Rust Services / Models]
   RUST --> OS[Windows API / Tray / Notification]
-  RUST --> DB[(SQLite)]
+  RUST --> DB[(SQLx / SQLite)]
 ```
 
 ## 4. ファイル構成
@@ -288,7 +289,7 @@ flowchart LR
 - 何か: Rust 側の Tauri バックエンド。
 - 何のために存在するか: OS 依存処理と将来の Command をまとめるため。
 - 将来的にどの処理を担当するか: 前面ウィンドウ取得、保存、通知、常駐、起動処理。
-- 現時点でどこまで実装されているか: 前面ウィンドウ取得のplatform処理とTauri Command、通知、自動起動、Store Plugin、システムトレイ、閉じる操作でのウィンドウ非表示化を実装済み。
+- 現時点でどこまで実装されているか: 前面ウィンドウ取得のplatform処理とTauri Command、通知、自動起動、Store Plugin、SQLite初期化・migration、システムトレイ、閉じる操作でのウィンドウ非表示化を実装済み。
 - どのファイルから呼ばれる予定か: Tauri ランタイムから起動される。
 - 今後どのような機能を追加する場所か: 継続監視、Command拡張、SQLite、利用条件に基づく通知。
 
@@ -324,9 +325,9 @@ flowchart LR
 - 何か: SQLite マイグレーション置き場。
 - 何のために存在するか: スキーマ変更を履歴として管理するため。
 - 将来的にどの処理を担当するか: DB テーブル作成や更新。
-- 現時点でどこまで実装されているか: README のみで未実装。
-- どのファイルから呼ばれる予定か: SQLite 導入後の起動処理から参照される。
-- 今後どのような機能を追加する場所か: テーブル追加、カラム変更、初期データ投入。
+- 現時点でどこまで実装されているか: `sqlx::migrate!`から参照される埋込みmigration置き場。Phase 1ではdomain SQL fileがなく、runnerだけを導入済み。
+- どのファイルから呼ばれるか: `src-tauri/src/database/migrations.rs`が起動時に参照する。`build.rs`がdirectory変更をCargoへ通知する。
+- 今後どのような機能を追加する場所か: #29と#32のcontract確定後、release済みfileを編集せずforward-onlyのSQL fileを追加する。
 
 ## 5. データ設計案
 
@@ -338,10 +339,8 @@ flowchart LR
 - 時給解決順: 登録appの`hourlyRateYen`がnumberならその値を使い、未登録または`null`ならdefaultへfallbackする。`0`は明示的な有効値なのでfallbackしない。
 - 保存順序: repositoryがappId順へcanonicalizeし、同じ論理設定から決定的なJSON payloadを作る。
 - legacy設定型: TypeScript/Rustの既存`AppSettings.hourlyRate`は将来案として残る下書きcontractであり、現在の時給設定のruntime正本・Store schemaではない。
-- SQLite のテーブル案: `activity_records`, `app_rules`, `app_settings`。
-- 各カラムの意味: `process_name` はプロセス名、`window_title` はウィンドウタイトル、`category` は分類、`started_at` / `ended_at` は開始終了時刻、`duration_seconds` は利用秒数、`hourly_rate` は時給。既存案の `calculated_cost` は互換性確認用のレガシー項目とし、新しい金額計算の正本にはしない。
-- 主キー: `id` を TEXT の主キーとして扱う案。
-- 日時の保存形式: UNIX epoch の整数で保存する案。
+- SQLiteのdomain schema: Phase 1時点では未作成。#29の所有者・同期metadataと#32の最終`SessionResult`を保存contractとして確定してから設計する。
+- SQLiteへ保存しない情報: window title、URL、PID、実行fileのfull path、raw tracking event、token/password。現在設定の時給もTauri Storeを正本としSQLiteへ二重保存しない。
 - 金額計算の正本: `src/services/moneyCalculationService.ts` の純粋関数を唯一の計算元とし、Rust、UI、repositoryでは再計算しない。
 - 金額計算の入力: `durationSeconds` は0以上の安全な整数で単位は秒、`hourlyRateYen` は0以上の有限数で単位は円/時とする。小数の時給も受け付ける。
 - 1レコードの換算式: `Math.round(durationSeconds * hourlyRateYen / 3600)` でレコードごとに円整数へ丸め、その後に集計する。
@@ -350,7 +349,7 @@ flowchart LR
 - 金額計算の失敗: 不正な秒数・時給・分類・内訳、および JavaScript の安全な整数範囲を超える結果は、値をログやメッセージへ露出させず `MoneyCalculationError` で通知する。
 - UI・保存との接続: 時給設定UIとStore永続化は実装済み。アプリ別利用時間と金額結果の画面表示・履歴保存は未接続で、後続consumerはresolverの値を金額計算serviceへ渡す。
 - カテゴリの管理方法: `productive / waste / neutral` の列挙型で管理する案。
-- データベースが未実装であること: 活動履歴用SQLiteは未実装。小規模設定の永続化にはTauri Store Pluginを使用しており、役割を混同しない。
+- データベースの実装境界: SQLite接続・migration基盤は実装済みだが、活動履歴のtable・保存・取得は未実装。小規模設定の永続化にはTauri Store Pluginを使用し、役割を混同しない。
 
 ## 6. 開発コマンド
 
@@ -397,13 +396,13 @@ npm run tauri dev
 
 ## 9. 実装状況
 
-- 現在の主要構成: React画面、Zustandストア、Zodスキーマ、TypeScriptサービス・repository、Tauri Store Plugin、Rustモデル・platform・Command、Tauri通知・自動起動・システムトレイ設定。
+- 現在の主要構成: React画面、Zustandストア、Zodスキーマ、TypeScriptサービス・repository、Tauri Store Plugin、Rustモデル・platform・Command、SQLx/SQLite初期化・migration、Tauri通知・自動起動・システムトレイ設定。
 - 現在動作する機能: 4画面の切り替え、アプリ起動からの経過時間表示、自動起動の切り替え、テスト通知、起動1分後の仮通知、トレイ常駐と再表示・終了、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・変更・解除・再起動復元、分類済みレコードの金額換算と集計を行うTypeScript純粋関数。
 - プレースホルダーとして存在するファイル: `src/services/settingsService.ts`, `src/services/tauriService.ts`, `src-tauri/src/commands/settings.rs`, `src-tauri/src/services/*`。
-- 未実装の機能: 前面ウィンドウの継続監視、切り替え検知、アプリ別時間計測、活動履歴のSQLite保存、分類、履歴表示、金額結果のUI表示・保存への接続、ブラウザ拡張機能、クラウド通信。
-- 将来実装する機能: 活動レコード作成、ルール適用、SQLite保存、実際の利用条件に基づく通知、日次・週次・月次集計。
+- 未実装の機能: 前面ウィンドウの継続監視、切り替え検知、アプリ別時間計測、活動履歴のSQLite schema・保存・取得、分類、履歴表示、金額結果のUI表示・保存への接続、ブラウザ拡張機能、クラウド通信。
+- 将来実装する機能: 活動レコード作成、ルール適用、SQLiteのdomain schema・repository、実際の利用条件に基づく通知、日次・週次・月次集計。
 - Windows 限定の処理: 前面ウィンドウの単発取得。アイドル検知などは将来の対象。
-- 現時点で導入していないライブラリやプラグイン: Tauri SQL Plugin。
+- 現時点で導入していないプラグイン: Tauri SQL Plugin。SQLiteはRust `sqlx`だけから扱う。
 
 ## 10. セキュリティとプライバシー
 

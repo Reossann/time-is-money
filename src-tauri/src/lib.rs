@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod database;
 pub mod models;
 pub mod platform;
 pub mod services;
@@ -64,6 +65,11 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
+            let database = tauri::async_runtime::block_on(database::initialize(app.handle()))?;
+            if !app.manage(database) {
+                return Err(database::DatabaseInitializationError::StateRegistrationFailed.into());
+            }
+
             #[cfg(desktop)]
             {
                 use tauri_plugin_autostart::MacosLauncher;
