@@ -66,6 +66,9 @@ pub fn run() {
         .manage(app_usage_tracker)
         .invoke_handler(tauri::generate_handler![
             commands::activity::get_active_window_info,
+            commands::activity::start_app_usage_tracking,
+            commands::activity::get_app_usage_tracking_snapshot,
+            commands::activity::stop_app_usage_tracking,
             receive_web_app_url
         ])
         .plugin(tauri_plugin_store::Builder::new().build())
