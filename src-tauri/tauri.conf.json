@@ -10,17 +10,11 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "Time Is Money",
-        "width": 1200,
-        "height": 800,
-        "resizable": true
-      }
-    ],
     "security": {
-      "capabilities": ["default"]
+      "capabilities": [
+        "default",
+        "tauri:core:event:allow-*"
+      ]
     }
   },
   "bundle": {
