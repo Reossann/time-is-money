@@ -34,11 +34,10 @@ fn receive_web_app_url(url: String) -> Result<String, String> {
     match url::Url::parse(&url) {
         Ok(_) => {
             // ここで後に JavaScript側に通知するイベントを発火させる
-            // 現在は受け取ったURLをログに出力
-            println!("ウェブアプリURL受信: {}", url);
-            Ok(format!("URLを受け取りました: {}", url))
+            // URL本体はログやCommand戻り値へ出さない。
+            Ok("URLを受け取りました".to_string())
         }
-        Err(e) => Err(format!("URLの解析に失敗しました: {}", e)),
+        Err(_) => Err("URLの解析に失敗しました".to_string()),
     }
 }
 
@@ -150,4 +149,29 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("Tauri アプリの起動に失敗しました");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::receive_web_app_url;
+
+    #[test]
+    fn receive_web_app_url_does_not_echo_the_full_url() {
+        let url = "https://example.com/private-path?token=secret";
+        let result = receive_web_app_url(url.to_owned()).unwrap();
+
+        assert_eq!(result, "URLを受け取りました");
+        assert!(!result.contains("example.com"));
+        assert!(!result.contains("private-path"));
+    }
+
+    #[test]
+    fn receive_web_app_url_hides_invalid_url_details() {
+        let raw_url = "not a valid URL with private-token";
+
+        let error = receive_web_app_url(raw_url.to_string()).expect_err("invalid URL must fail");
+
+        assert_eq!(error, "URLの解析に失敗しました");
+        assert!(!error.contains("private-token"));
+    }
 }

@@ -123,10 +123,8 @@ export function detectWebApp(url: string): WebApp | null {
 
     // マッチしない場合は null を返す
     return null;
-  } catch (err) {
-    const errorMsg =
-      err instanceof Error ? err.message : "URLの解析に失敗しました";
-    console.error(`detectWebApp エラー: ${errorMsg}`, { url });
+  } catch {
+    console.error("detectWebApp: URLの解析に失敗しました");
     return null;
   }
 }
@@ -141,7 +139,7 @@ export function extractDomain(url: string): string {
     const urlObj = new URL(url);
     return urlObj.hostname;
   } catch {
-    console.error("extractDomain エラー", { url });
+    console.error("extractDomain: URLの解析に失敗しました");
     return "";
   }
 }
@@ -210,7 +208,7 @@ export function hasWebAppChanged(
 
     return currentWebApp.id !== previousWebAppId;
   } catch {
-    console.error("hasWebAppChanged エラー", { currentUrl, previousWebAppId });
+    console.error("hasWebAppChanged: URLの判定に失敗しました");
     return false;
   }
 }

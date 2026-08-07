@@ -52,6 +52,21 @@ const snapshot: AppUsageSnapshot = Object.freeze({
   ]),
 });
 
+const previewSnapshot: AppUsageSnapshot = Object.freeze({
+  ...snapshot,
+  capturedAt: 3_000,
+  durationSeconds: 2,
+  trackedDurationSeconds: 1,
+  untrackedDurationSeconds: 1,
+  apps: Object.freeze([
+    Object.freeze({
+      appId: "code.exe",
+      processName: "Code.exe",
+      durationSeconds: 1,
+    }),
+  ]),
+});
+
 function resetActivityStore(): void {
   useActivityStore.setState({
     elapsedSeconds: 0,
@@ -177,6 +192,29 @@ describe("useMeasurementTracking", () => {
     await expect(retry).resolves.toBe(snapshot);
     expect(stopTrackingMock).toHaveBeenNthCalledWith(2, SESSION_ID, 4_000);
     expect(getMeasurementTrackingState()).toMatchObject({
+      status: "stopped",
+      snapshot,
+      errorCode: null,
+    });
+  });
+
+  it("keeps the final snapshot when an earlier preview resolves after stop", async () => {
+    await ensureMeasurementTrackingStarted();
+    let resolvePreview: ((value: AppUsageSnapshot) => void) | undefined;
+    getSnapshotMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePreview = resolve;
+      }),
+    );
+
+    const preview = refreshAppUsageTrackingSnapshot(3_000);
+    await Promise.resolve();
+    const stopped = stopAndSnapshotAppUsage(4_000);
+    await expect(stopped).resolves.toBe(snapshot);
+
+    resolvePreview?.(previewSnapshot);
+    await expect(preview).resolves.toBe(previewSnapshot);
+    expect(getMeasurementTrackingState()).toEqual({
       status: "stopped",
       snapshot,
       errorCode: null,
