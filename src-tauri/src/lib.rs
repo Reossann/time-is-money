@@ -11,7 +11,10 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 
-use services::notification_service::{pick_random_message, DEFAULT_TONE};
+use services::{
+    app_usage_tracker::AppUsageTracker,
+    notification_service::{pick_random_message, DEFAULT_TONE},
+};
 
 const APP_ICON: Image<'_> = tauri::include_image!("icons/icon.png");
 
@@ -56,7 +59,11 @@ fn show_main_window(app: &AppHandle) {
 }
 
 pub fn run() {
+    let app_usage_tracker = AppUsageTracker::for_current_process()
+        .expect("前面アプリ利用時間trackerを初期化できませんでした");
+
     tauri::Builder::default()
+        .manage(app_usage_tracker)
         .invoke_handler(tauri::generate_handler![
             commands::activity::get_active_window_info,
             receive_web_app_url
