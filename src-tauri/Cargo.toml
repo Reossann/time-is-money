@@ -19,6 +19,7 @@ tauri-plugin-store = "2"
 tokio = { version = "1", features = ["time", "rt"] }
 url = "2"
 rand = "0.9"
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite-bundled", "migrate", "macros"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = ">=0.59, <=0.62", features = [
