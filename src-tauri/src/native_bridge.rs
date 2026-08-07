@@ -153,7 +153,17 @@ fn handle_connection(app_handle: &tauri::AppHandle, stream: &mut TcpStream) -> i
             NativeBridgeAck::error(format!("invalid native bridge payload: {error}"))
         }
     };
-    return Ok(()); 
+
+    let ack_payload = serde_json::to_vec(&ack).map_err(|error| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("serialize native bridge ack failed: {error}"),
+        )
+    })?;
+
+    write_frame(stream, &ack_payload)?;
+
+    Ok(())
 }
 
 #[cfg(test)]
