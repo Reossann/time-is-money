@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { HourlyRateSettings } from "../types/hourlyRateSettings";
+import { calculateMoneyBreakdown } from "./moneyCalculationService";
 import {
   clearAppHourlyRateYen,
   createDefaultHourlyRateSettings,
@@ -198,5 +199,79 @@ describe("resolveHourlyRateYen", () => {
     } as HourlyRateSettings;
 
     expect(() => resolveHourlyRateYen("Code.exe", invalidSettings)).toThrow();
+  });
+});
+
+describe("hourly rate resolution and money calculation integration", () => {
+  const defaultSettings = setDefaultHourlyRateYen(
+    3_000,
+    createDefaultHourlyRateSettings(),
+  );
+  const registeredSettings = createSettingsWithCode();
+
+  it.each([
+    {
+      name: "uses the default for an unregistered productive app",
+      processName: "notepad.exe",
+      settings: defaultSettings,
+      durationSeconds: 1_800,
+      category: "productive",
+      expectedHourlyRateYen: 3_000,
+      expectedBreakdown: { earnedYen: 1_500, wastedYen: 0, netYen: 1_500 },
+    },
+    {
+      name: "uses the default for a registered app without an override",
+      processName: "CODE.EXE",
+      settings: registeredSettings,
+      durationSeconds: 1_800,
+      category: "waste",
+      expectedHourlyRateYen: 3_000,
+      expectedBreakdown: { earnedYen: 0, wastedYen: 1_500, netYen: -1_500 },
+    },
+    {
+      name: "uses an app override for productive time",
+      processName: "code.exe",
+      settings: setAppHourlyRateYen("Code.exe", 1_500, registeredSettings),
+      durationSeconds: 1_800,
+      category: "productive",
+      expectedHourlyRateYen: 1_500,
+      expectedBreakdown: { earnedYen: 750, wastedYen: 0, netYen: 750 },
+    },
+    {
+      name: "preserves an explicit zero override for waste time",
+      processName: "Code.exe",
+      settings: setAppHourlyRateYen("Code.exe", 0, registeredSettings),
+      durationSeconds: 3_600,
+      category: "waste",
+      expectedHourlyRateYen: 0,
+      expectedBreakdown: { earnedYen: 0, wastedYen: 0, netYen: 0 },
+    },
+    {
+      name: "passes a fractional override to the existing rounding contract",
+      processName: "Code.exe",
+      settings: setAppHourlyRateYen("Code.exe", 1_234.5, registeredSettings),
+      durationSeconds: 120,
+      category: "productive",
+      expectedHourlyRateYen: 1_234.5,
+      expectedBreakdown: { earnedYen: 41, wastedYen: 0, netYen: 41 },
+    },
+  ] as const)("$name", ({
+    processName,
+    settings,
+    durationSeconds,
+    category,
+    expectedHourlyRateYen,
+    expectedBreakdown,
+  }) => {
+    const hourlyRateYen = resolveHourlyRateYen(processName, settings);
+
+    expect(hourlyRateYen).toBe(expectedHourlyRateYen);
+    expect(
+      calculateMoneyBreakdown({
+        durationSeconds,
+        hourlyRateYen,
+        category,
+      }),
+    ).toEqual(expectedBreakdown);
   });
 });

@@ -680,7 +680,7 @@ describe("HourlyRateSettingsSection", () => {
     expect(screen.getByText("notepad.exe")).toBeInTheDocument();
   });
 
-  it("clears the countdown timer when unmounted", async () => {
+  it("cancels capture when navigation unmounts the settings section", async () => {
     const captureActiveWindow = vi.fn().mockResolvedValue(capturedCodeWindow);
     const { unmount } = await renderReady(
       createRepository(),

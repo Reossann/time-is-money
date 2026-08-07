@@ -193,6 +193,8 @@ describe("hourlyRateSettingsRepository.load", () => {
     await expect(createRepository(store).load()).rejects.toMatchObject({
       code: "INVALID_STORED_SETTINGS",
     });
+    expect(store.setCalls).toEqual([]);
+    expect(store.saveCalls).toBe(0);
   });
 
   it("does not expose invalid stored values in repository errors", async () => {
@@ -262,6 +264,58 @@ describe("hourlyRateSettingsRepository.save", () => {
     expect(Object.isFrozen(savedSettings)).toBe(true);
     expect(Object.isFrozen(savedSettings.desktopApps)).toBe(true);
     expect(savedSettings.desktopApps.every(Object.isFrozen)).toBe(true);
+  });
+
+  it("serializes only schema-approved process information", async () => {
+    const capturedWindowSource = {
+      processName: "Code.exe",
+      windowTitle: "PRIVATE client contract - Visual Studio Code",
+      processId: 42_424,
+      fullPath: "C:\\Private\\Code.exe",
+      url: "https://private.example.test/account",
+    } as const;
+    const defaults = setDefaultHourlyRateYen(
+      3_000,
+      createDefaultHourlyRateSettings(),
+    );
+    const registered = registerDesktopApp(
+      capturedWindowSource.processName,
+      defaults,
+    );
+    const settings = setAppHourlyRateYen(
+      capturedWindowSource.processName,
+      1_500,
+      registered,
+    );
+    const store = new FakeSettingsStore();
+
+    const savedSettings = await createRepository(store).save(settings);
+    const serializedPayload = JSON.stringify(
+      store.getDiskValue(HOURLY_RATE_SETTINGS_STORE_KEY),
+    );
+
+    expect(JSON.parse(serializedPayload)).toEqual(savedSettings);
+    expect(Object.keys(savedSettings.desktopApps[0]).sort()).toEqual([
+      "appId",
+      "hourlyRateYen",
+      "processName",
+    ]);
+    for (const forbiddenKey of [
+      "windowTitle",
+      "processId",
+      "fullPath",
+      "url",
+    ]) {
+      expect(serializedPayload).not.toContain(`"${forbiddenKey}"`);
+    }
+    for (const privateValue of [
+      capturedWindowSource.windowTitle,
+      String(capturedWindowSource.processId),
+      capturedWindowSource.fullPath,
+      capturedWindowSource.url,
+    ]) {
+      expect(serializedPayload).not.toContain(privateValue);
+    }
   });
 
   it("does not resolve before the explicit store save completes", async () => {
