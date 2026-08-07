@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -7,6 +7,8 @@ import type { HourlyRateSettingsRepository } from "../../repositories/hourlyRate
 import {
   createDefaultHourlyRateSettings,
   registerDesktopApp,
+  resolveHourlyRateYen,
+  setAppHourlyRateYen,
   setDefaultHourlyRateYen,
 } from "../../services/hourlyRateSettingsService";
 import type { ActiveWindowInfo } from "../../types/activity";
@@ -42,6 +44,29 @@ function createRepository(
     load: vi.fn().mockResolvedValue(settings),
     save: vi.fn().mockImplementation(async (value) => value),
   };
+}
+
+function createSettingsWithRegisteredApps() {
+  let settings = setDefaultHourlyRateYen(
+    3_000,
+    createDefaultHourlyRateSettings(),
+  );
+  settings = registerDesktopApp("notepad.exe", settings);
+  return registerDesktopApp("Code.exe", settings);
+}
+
+function getAppCard(processName: string) {
+  const heading = screen.getByRole("heading", {
+    level: 5,
+    name: processName,
+  });
+  const card = heading.closest("li");
+
+  if (card === null) {
+    throw new Error(`app card was not found: ${processName}`);
+  }
+
+  return within(card);
 }
 
 async function renderReady(
@@ -244,6 +269,215 @@ describe("HourlyRateSettingsSection", () => {
     expect(
       await screen.findByText("保存済みの時給: 3000 円/時"),
     ).toBeInTheDocument();
+  });
+
+  it("sorts registered apps by ID and shows the resolved default rate", async () => {
+    const settings = createSettingsWithRegisteredApps();
+    await renderReady(createRepository(settings));
+
+    const appHeadings = within(
+      screen.getByRole("list", { name: "登録済みアプリ" }),
+    ).getAllByRole("heading", { level: 5 });
+    expect(appHeadings.map((heading) => heading.textContent)).toEqual([
+      "Code.exe",
+      "notepad.exe",
+    ]);
+
+    const resolvedCodeRate = resolveHourlyRateYen("Code.exe", settings);
+    expect(resolvedCodeRate).toBe(3_000);
+    expect(
+      getAppCard("Code.exe").getByText(
+        `デフォルト時給を使用中: ${resolvedCodeRate}円/時`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      getAppCard("Code.exe").getByRole("spinbutton", {
+        name: "Code.exeの上書き時給（円/時）",
+      }),
+    ).toHaveValue(null);
+  });
+
+  it("saves a fractional app rate and can change it to explicit zero", async () => {
+    const settings = createSettingsWithRegisteredApps();
+    const { repository, user } = await renderReady(createRepository(settings));
+    const codeInput = getAppCard("Code.exe").getByRole("spinbutton", {
+      name: "Code.exeの上書き時給（円/時）",
+    });
+    const saveButton = getAppCard("Code.exe").getByRole("button", {
+      name: "Code.exeの上書き時給を保存",
+    });
+
+    await user.type(codeInput, "1500.5");
+    await user.click(saveButton);
+
+    expect(repository.save).toHaveBeenCalledOnce();
+    expect(repository.save.mock.calls[0][0].desktopApps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ appId: "code.exe", hourlyRateYen: 1500.5 }),
+        expect.objectContaining({
+          appId: "notepad.exe",
+          hourlyRateYen: null,
+        }),
+      ]),
+    );
+    expect(
+      getAppCard("Code.exe").getByText("利用中の時給: 1500.5円/時"),
+    ).toBeInTheDocument();
+
+    await user.clear(codeInput);
+    await user.type(codeInput, "0");
+    await user.click(saveButton);
+
+    expect(repository.save).toHaveBeenCalledTimes(2);
+    expect(
+      getAppCard("Code.exe").getByText("利用中の時給: 0円/時"),
+    ).toBeInTheDocument();
+    expect(
+      repository.save.mock.calls[1][0].desktopApps.find(
+        (entry) => entry.appId === "code.exe",
+      )?.hourlyRateYen,
+    ).toBe(0);
+  });
+
+  it("validates an app draft with Zod before saving", async () => {
+    const settings = createSettingsWithRegisteredApps();
+    const { repository, user } = await renderReady(createRepository(settings));
+    const codeCard = getAppCard("Code.exe");
+    const codeInput = codeCard.getByRole("spinbutton", {
+      name: "Code.exeの上書き時給（円/時）",
+    });
+    const saveButton = codeCard.getByRole("button", {
+      name: "Code.exeの上書き時給を保存",
+    });
+
+    await user.click(saveButton);
+    expect(codeCard.getByRole("alert")).toHaveTextContent(
+      "アプリ別の上書き時給を入力してください。",
+    );
+
+    await user.type(codeInput, "-1");
+    await user.click(saveButton);
+    expect(codeCard.getByRole("alert")).toHaveTextContent(
+      "0以上の数値を入力してください。",
+    );
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it("clears only the override while keeping the registered app", async () => {
+    const settings = setAppHourlyRateYen(
+      "Code.exe",
+      1_500.5,
+      createSettingsWithRegisteredApps(),
+    );
+    const { repository, user } = await renderReady(createRepository(settings));
+
+    await user.click(
+      getAppCard("Code.exe").getByRole("button", {
+        name: "Code.exeの上書きを解除",
+      }),
+    );
+
+    const savedSettings = repository.save.mock.calls[0][0];
+    expect(savedSettings.desktopApps).toHaveLength(2);
+    expect(
+      savedSettings.desktopApps.find((entry) => entry.appId === "code.exe"),
+    ).toEqual({
+      appId: "code.exe",
+      processName: "Code.exe",
+      hourlyRateYen: null,
+    });
+    expect(
+      getAppCard("Code.exe").getByText(
+        "デフォルト時給を使用中: 3000円/時",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      getAppCard("Code.exe").getByRole("spinbutton", {
+        name: "Code.exeの上書き時給（円/時）",
+      }),
+    ).toHaveValue(null);
+    expect(
+      getAppCard("Code.exe").getByRole("button", {
+        name: "Code.exeの上書きを解除",
+      }),
+    ).toBeDisabled();
+    expect(getAppCard("Code.exe").getByRole("status")).toHaveTextContent(
+      "上書き時給を解除しました。",
+    );
+  });
+
+  it("keeps the app draft and confirmed rate when saving fails", async () => {
+    const settings = setAppHourlyRateYen(
+      "Code.exe",
+      1_500,
+      createSettingsWithRegisteredApps(),
+    );
+    const repository = createRepository(settings);
+    repository.save.mockRejectedValue(new Error("PRIVATE save error"));
+    const { user } = await renderReady(repository);
+    const codeCard = getAppCard("Code.exe");
+    const codeInput = codeCard.getByRole("spinbutton", {
+      name: "Code.exeの上書き時給（円/時）",
+    });
+
+    await user.clear(codeInput);
+    await user.type(codeInput, "4500");
+    await user.click(
+      codeCard.getByRole("button", {
+        name: "Code.exeの上書き時給を保存",
+      }),
+    );
+
+    expect(codeInput).toHaveValue(4500);
+    expect(codeCard.getByText("利用中の時給: 1500円/時")).toBeInTheDocument();
+    expect(codeCard.getByRole("alert")).toHaveTextContent(
+      "上書き時給を保存できませんでした。もう一度お試しください。",
+    );
+  });
+
+  it("keeps another app draft and separates per-app status messages", async () => {
+    const settings = createSettingsWithRegisteredApps();
+    const repository = createRepository(settings);
+    const deferred = createDeferred<HourlyRateSettings>();
+    repository.save.mockReturnValue(deferred.promise);
+    const { user } = await renderReady(repository);
+    const codeCard = getAppCard("Code.exe");
+    const notepadCard = getAppCard("notepad.exe");
+    const codeInput = codeCard.getByRole("spinbutton", {
+      name: "Code.exeの上書き時給（円/時）",
+    });
+    const notepadInput = notepadCard.getByRole("spinbutton", {
+      name: "notepad.exeの上書き時給（円/時）",
+    });
+
+    await user.type(codeInput, "1500.5");
+    await user.type(notepadInput, "2200");
+    fireEvent.click(
+      codeCard.getByRole("button", {
+        name: "Code.exeの上書き時給を保存",
+      }),
+    );
+    fireEvent.click(
+      codeCard.getByRole("button", {
+        name: "Code.exeの上書き時給を保存",
+      }),
+    );
+
+    expect(repository.save).toHaveBeenCalledOnce();
+    expect(codeInput).toBeDisabled();
+    expect(notepadInput).not.toBeDisabled();
+    expect(notepadInput).toHaveValue(2200);
+
+    await act(async () => {
+      deferred.resolve(setAppHourlyRateYen("Code.exe", 1_500.5, settings));
+      await deferred.promise;
+    });
+
+    expect(notepadInput).toHaveValue(2200);
+    expect(codeCard.getByRole("status")).toHaveTextContent(
+      "上書き時給を保存しました。",
+    );
+    expect(notepadCard.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("does not update state after unmounting during load", async () => {

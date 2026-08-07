@@ -6,8 +6,11 @@ import {
 } from "../../repositories/hourlyRateSettingsRepository";
 import { getActiveWindowInfo } from "../../services/activityService";
 import {
+  clearAppHourlyRateYen,
   normalizeDesktopAppId,
   registerDesktopApp,
+  resolveHourlyRateYen,
+  setAppHourlyRateYen,
   setDefaultHourlyRateYen,
 } from "../../services/hourlyRateSettingsService";
 import type { HourlyRateSettings } from "../../types/hourlyRateSettings";
@@ -25,9 +28,10 @@ type HourlyRateSettingsSectionProps = Readonly<{
 
 function parseHourlyRateDraft(
   draft: string,
+  emptyDraftMessage = "デフォルト時給を入力してください。",
 ): { value: number } | { error: string } {
   if (draft.trim().length === 0) {
-    return { error: "デフォルト時給を入力してください。" };
+    return { error: emptyDraftMessage };
   }
 
   const result = hourlyRateYenSchema.safeParse(Number(draft));
@@ -63,6 +67,22 @@ export function HourlyRateSettingsSection({
   const [captureStatusMessage, setCaptureStatusMessage] = useState<
     string | null
   >(null);
+  const [appRateDrafts, setAppRateDrafts] = useState<
+    Readonly<Record<string, string>>
+  >({});
+  const [appValidationErrors, setAppValidationErrors] = useState<
+    Readonly<Record<string, string | null>>
+  >({});
+  const [appSaveErrors, setAppSaveErrors] = useState<
+    Readonly<Record<string, string | null>>
+  >({});
+  const [appStatusMessages, setAppStatusMessages] = useState<
+    Readonly<Record<string, string | null>>
+  >({});
+  const [appSaveOperation, setAppSaveOperation] = useState<{
+    appId: string;
+    action: "save" | "clear";
+  } | null>(null);
 
   const loadPromiseRef = useRef<Promise<HourlyRateSettings> | null>(null);
   const mountedRef = useRef(false);
@@ -115,6 +135,13 @@ export function HourlyRateSettingsSection({
     setValidationErrorMessage(null);
     setSaveErrorMessage(null);
     setSaveStatusMessage(null);
+  };
+
+  const handleAppDraftChange = (appId: string, value: string) => {
+    setAppRateDrafts((current) => ({ ...current, [appId]: value }));
+    setAppValidationErrors((current) => ({ ...current, [appId]: null }));
+    setAppSaveErrors((current) => ({ ...current, [appId]: null }));
+    setAppStatusMessages((current) => ({ ...current, [appId]: null }));
   };
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
@@ -316,6 +343,137 @@ export function HourlyRateSettingsSection({
     }
   };
 
+  const handleSaveAppRate = async (appId: string, processName: string) => {
+    if (settings === null || savingRef.current) {
+      return;
+    }
+
+    const entry = settings.desktopApps.find((app) => app.appId === appId);
+    if (entry === undefined) {
+      return;
+    }
+
+    const draft =
+      appRateDrafts[appId] ??
+      (entry.hourlyRateYen === null ? "" : String(entry.hourlyRateYen));
+    const parsedDraft = parseHourlyRateDraft(
+      draft,
+      "アプリ別の上書き時給を入力してください。",
+    );
+    if ("error" in parsedDraft) {
+      setAppValidationErrors((current) => ({
+        ...current,
+        [appId]: parsedDraft.error,
+      }));
+      setAppSaveErrors((current) => ({ ...current, [appId]: null }));
+      setAppStatusMessages((current) => ({ ...current, [appId]: null }));
+      return;
+    }
+
+    savingRef.current = true;
+    setIsSaving(true);
+    setAppSaveOperation({ appId, action: "save" });
+    setAppValidationErrors((current) => ({ ...current, [appId]: null }));
+    setAppSaveErrors((current) => ({ ...current, [appId]: null }));
+    setAppStatusMessages((current) => ({ ...current, [appId]: null }));
+
+    try {
+      const nextSettings = setAppHourlyRateYen(
+        processName,
+        parsedDraft.value,
+        settings,
+      );
+      const savedSettings = await repository.save(nextSettings);
+
+      if (mountedRef.current) {
+        const savedEntry = savedSettings.desktopApps.find(
+          (app) => app.appId === appId,
+        );
+        setSettings(savedSettings);
+        if (savedEntry !== undefined) {
+          setAppRateDrafts((current) => ({
+            ...current,
+            [appId]:
+              savedEntry.hourlyRateYen === null
+                ? ""
+                : String(savedEntry.hourlyRateYen),
+          }));
+        }
+        setAppStatusMessages((current) => ({
+          ...current,
+          [appId]: "上書き時給を保存しました。",
+        }));
+      }
+    } catch {
+      if (mountedRef.current) {
+        setAppSaveErrors((current) => ({
+          ...current,
+          [appId]: "上書き時給を保存できませんでした。もう一度お試しください。",
+        }));
+      }
+    } finally {
+      savingRef.current = false;
+      if (mountedRef.current) {
+        setIsSaving(false);
+        setAppSaveOperation(null);
+      }
+    }
+  };
+
+  const handleClearAppRate = async (appId: string, processName: string) => {
+    if (settings === null || savingRef.current) {
+      return;
+    }
+
+    const entry = settings.desktopApps.find((app) => app.appId === appId);
+    if (entry === undefined || entry.hourlyRateYen === null) {
+      return;
+    }
+
+    savingRef.current = true;
+    setIsSaving(true);
+    setAppSaveOperation({ appId, action: "clear" });
+    setAppValidationErrors((current) => ({ ...current, [appId]: null }));
+    setAppSaveErrors((current) => ({ ...current, [appId]: null }));
+    setAppStatusMessages((current) => ({ ...current, [appId]: null }));
+
+    try {
+      const nextSettings = clearAppHourlyRateYen(processName, settings);
+      const savedSettings = await repository.save(nextSettings);
+
+      if (mountedRef.current) {
+        setSettings(savedSettings);
+        setAppRateDrafts((current) => ({ ...current, [appId]: "" }));
+        setAppStatusMessages((current) => ({
+          ...current,
+          [appId]: "上書き時給を解除しました。",
+        }));
+      }
+    } catch {
+      if (mountedRef.current) {
+        setAppSaveErrors((current) => ({
+          ...current,
+          [appId]: "上書き時給を解除できませんでした。もう一度お試しください。",
+        }));
+      }
+    } finally {
+      savingRef.current = false;
+      if (mountedRef.current) {
+        setIsSaving(false);
+        setAppSaveOperation(null);
+      }
+    }
+  };
+
+  const sortedDesktopApps =
+    settings === null
+      ? []
+      : [...settings.desktopApps].sort((left, right) =>
+          left.appId.localeCompare(right.appId),
+        );
+  const isDefaultRateSaving =
+    isSaving && !isAddingCandidate && appSaveOperation === null;
+
   return (
     <section
       className="hourly-rate-settings"
@@ -335,66 +493,68 @@ export function HourlyRateSettingsSection({
           時給設定を読み込んでいます...
         </p>
       ) : (
-        <form
-          className="hourly-rate-settings__form"
-          onSubmit={handleSave}
-          noValidate
-        >
-          <p className="hourly-rate-settings__saved-value">
-            保存済みの時給: {settings.defaultHourlyRateYen} 円/時
-          </p>
+        <>
+          <form
+            className="hourly-rate-settings__form"
+            onSubmit={handleSave}
+            noValidate
+          >
+            <p className="hourly-rate-settings__saved-value">
+              保存済みの時給: {settings.defaultHourlyRateYen} 円/時
+            </p>
 
-          <div className="hourly-rate-settings__field">
-            <label htmlFor="default-hourly-rate">
-              デフォルト時給（円/時）
-            </label>
-            <div className="hourly-rate-settings__input-row">
-              <input
-                id="default-hourly-rate"
-                name="defaultHourlyRateYen"
-                type="number"
-                min="0"
-                step="any"
-                value={defaultRateDraft}
-                onChange={(event) => handleDraftChange(event.target.value)}
-                disabled={isSaving}
-                aria-invalid={validationErrorMessage !== null}
-                aria-describedby={
-                  validationErrorMessage === null
-                    ? undefined
-                    : "default-hourly-rate-error"
-                }
-              />
-              <span aria-hidden="true">円/時</span>
+            <div className="hourly-rate-settings__field">
+              <label htmlFor="default-hourly-rate">
+                デフォルト時給（円/時）
+              </label>
+              <div className="hourly-rate-settings__input-row">
+                <input
+                  id="default-hourly-rate"
+                  name="defaultHourlyRateYen"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={defaultRateDraft}
+                  onChange={(event) => handleDraftChange(event.target.value)}
+                  disabled={isSaving}
+                  aria-invalid={validationErrorMessage !== null}
+                  aria-describedby={
+                    validationErrorMessage === null
+                      ? undefined
+                      : "default-hourly-rate-error"
+                  }
+                />
+                <span aria-hidden="true">円/時</span>
+              </div>
+              {validationErrorMessage !== null && (
+                <p id="default-hourly-rate-error" role="alert">
+                  {validationErrorMessage}
+                </p>
+              )}
             </div>
-            {validationErrorMessage !== null && (
-              <p id="default-hourly-rate-error" role="alert">
-                {validationErrorMessage}
+
+            <button
+              className="hourly-rate-settings__save-button"
+              type="submit"
+              disabled={isSaving}
+            >
+              {isDefaultRateSaving ? "保存中..." : "デフォルト時給を保存"}
+            </button>
+
+            {saveErrorMessage !== null && (
+              <p className="hourly-rate-settings__message" role="alert">
+                {saveErrorMessage}
               </p>
             )}
-          </div>
-
-          <button
-            className="hourly-rate-settings__save-button"
-            type="submit"
-            disabled={isSaving}
-          >
-            {isSaving ? "保存中..." : "デフォルト時給を保存"}
-          </button>
-
-          {saveErrorMessage !== null && (
-            <p className="hourly-rate-settings__message" role="alert">
-              {saveErrorMessage}
-            </p>
-          )}
-          {saveStatusMessage !== null && (
-            <p
-              className="hourly-rate-settings__message hourly-rate-settings__message--success"
-              role="status"
-            >
-              {saveStatusMessage}
-            </p>
-          )}
+            {saveStatusMessage !== null && (
+              <p
+                className="hourly-rate-settings__message hourly-rate-settings__message--success"
+                role="status"
+              >
+                {saveStatusMessage}
+              </p>
+            )}
+          </form>
 
           <div className="hourly-rate-settings__capture">
             <div className="hourly-rate-settings__capture-header">
@@ -465,18 +625,135 @@ export function HourlyRateSettingsSection({
 
             <div className="hourly-rate-settings__registered-apps">
               <h4>登録済みアプリ</h4>
-              {settings.desktopApps.length === 0 ? (
+              {sortedDesktopApps.length === 0 ? (
                 <p>登録済みアプリはありません。</p>
               ) : (
                 <ul aria-label="登録済みアプリ">
-                  {settings.desktopApps.map((entry) => (
-                    <li key={entry.appId}>{entry.processName}</li>
-                  ))}
+                  {sortedDesktopApps.map((entry) => {
+                    const inputId = `app-hourly-rate-${entry.appId}`;
+                    const errorId = `${inputId}-error`;
+                    const resolvedHourlyRateYen = resolveHourlyRateYen(
+                      entry.processName,
+                      settings,
+                    );
+                    const isThisAppSaving =
+                      appSaveOperation?.appId === entry.appId;
+                    const validationError =
+                      appValidationErrors[entry.appId] ?? null;
+                    const saveError = appSaveErrors[entry.appId] ?? null;
+                    const statusMessage =
+                      appStatusMessages[entry.appId] ?? null;
+                    const draft =
+                      appRateDrafts[entry.appId] ??
+                      (entry.hourlyRateYen === null
+                        ? ""
+                        : String(entry.hourlyRateYen));
+
+                    return (
+                      <li
+                        className="hourly-rate-settings__app-card"
+                        key={entry.appId}
+                      >
+                        <h5>{entry.processName}</h5>
+                        <p className="hourly-rate-settings__active-rate">
+                          {entry.hourlyRateYen === null
+                            ? `デフォルト時給を使用中: ${resolvedHourlyRateYen}円/時`
+                            : `利用中の時給: ${resolvedHourlyRateYen}円/時`}
+                        </p>
+
+                        <div className="hourly-rate-settings__field">
+                          <label htmlFor={inputId}>
+                            {entry.processName}の上書き時給（円/時）
+                          </label>
+                          <div className="hourly-rate-settings__input-row">
+                            <input
+                              id={inputId}
+                              name={`hourlyRateYen-${entry.appId}`}
+                              type="number"
+                              min="0"
+                              step="any"
+                              placeholder="未設定"
+                              value={draft}
+                              onChange={(event) =>
+                                handleAppDraftChange(
+                                  entry.appId,
+                                  event.target.value,
+                                )
+                              }
+                              disabled={isThisAppSaving}
+                              aria-invalid={validationError !== null}
+                              aria-describedby={
+                                validationError === null ? undefined : errorId
+                              }
+                            />
+                            <span aria-hidden="true">円/時</span>
+                          </div>
+                          {validationError !== null && (
+                            <p id={errorId} role="alert">
+                              {validationError}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="hourly-rate-settings__app-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleSaveAppRate(
+                                entry.appId,
+                                entry.processName,
+                              )
+                            }
+                            disabled={isSaving}
+                            aria-label={`${entry.processName}の上書き時給を保存`}
+                          >
+                            {isThisAppSaving &&
+                            appSaveOperation.action === "save"
+                              ? "保存中..."
+                              : "保存"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleClearAppRate(
+                                entry.appId,
+                                entry.processName,
+                              )
+                            }
+                            disabled={isSaving || entry.hourlyRateYen === null}
+                            aria-label={`${entry.processName}の上書きを解除`}
+                          >
+                            {isThisAppSaving &&
+                            appSaveOperation.action === "clear"
+                              ? "解除中..."
+                              : "上書きを解除"}
+                          </button>
+                        </div>
+
+                        {saveError !== null && (
+                          <p
+                            className="hourly-rate-settings__message"
+                            role="alert"
+                          >
+                            {saveError}
+                          </p>
+                        )}
+                        {statusMessage !== null && (
+                          <p
+                            className="hourly-rate-settings__message hourly-rate-settings__message--success"
+                            role="status"
+                          >
+                            {statusMessage}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
           </div>
-        </form>
+        </>
       )}
     </section>
   );
