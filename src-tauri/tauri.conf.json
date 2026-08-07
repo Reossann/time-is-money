@@ -5,8 +5,7 @@
   "identifier": "io.github.reossann.time-is-money",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "beforeBundleCommand": "npm run build:native-messaging",
+    "beforeBuildCommand": "npm run build && npm run build:native-messaging",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
@@ -30,6 +29,10 @@
     "resources": {
       "native-messaging.config.json": "native-messaging.config.json"
     },
+    "externalBin": [
+      "binaries/native-messaging-host",
+      "binaries/native-messaging-setup"
+    ],
     "windows": {
       "nsis": {
         "installerHooks": "installer/native-messaging.nsh"

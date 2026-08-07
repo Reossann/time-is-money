@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "build:native-messaging": "cargo build --manifest-path src-tauri/Cargo.toml --release --bin native-messaging-host --bin native-messaging-setup",
+    "build:native-messaging": "node scripts/stage-native-messaging-binaries.mjs",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",
