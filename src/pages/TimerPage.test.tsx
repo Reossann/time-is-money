@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TimerPage } from "./TimerPage";
 import { useActivityStore } from "../stores/useActivityStore";
 import { useWebAppStore } from "../stores/useWebAppStore";
+import { resetMeasurementTrackingControllerForTests } from "../hooks/useMeasurementTracking";
 
 describe("TimerPage", () => {
   beforeEach(() => {
     vi.useRealTimers();
+    resetMeasurementTrackingControllerForTests();
     useActivityStore.setState({ elapsedSeconds: 0, startedAt: null });
     useWebAppStore.setState({
       currentSession: null,
@@ -94,5 +96,15 @@ describe("TimerPage", () => {
     });
 
     expect(screen.getAllByText("00:00:02")).toHaveLength(2);
+  });
+
+  it("shows the Windows app diagnostics in development", () => {
+    render(<TimerPage />);
+
+    expect(
+      screen.getByRole("region", {
+        name: "Windowsアプリ利用時間の開発診断",
+      }),
+    ).toBeInTheDocument();
   });
 });

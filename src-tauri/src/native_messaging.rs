@@ -105,6 +105,7 @@ fn sanitize_url(raw_url: &str) -> Result<String, String> {
 
     let _ = url.set_username("");
     let _ = url.set_password(None);
+    url.set_path("/");
     url.set_query(None);
     url.set_fragment(None);
 
@@ -363,7 +364,7 @@ mod tests {
         assert_eq!(response.code, CODE_OK);
         assert_eq!(
             response.sanitized_url.as_deref(),
-            Some("https://docs.google.com/document/d/example")
+            Some("https://docs.google.com/")
         );
     }
 

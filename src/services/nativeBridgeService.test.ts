@@ -28,14 +28,14 @@ describe("handleNativeWebAppEvent", () => {
 
     const state = useWebAppStore.getState();
     expect(state.nativeBridgeStatus).toBe("connected");
-    expect(state.currentSession?.webAppId).toBe("github");
+    expect(state.currentSession?.webAppId).toBe("web-domain:github.com");
   });
 
-  it("ends the current session for an unsupported URL", () => {
+  it("switches the current session for an unknown domain", () => {
     const now = vi.spyOn(Date, "now");
     now.mockReturnValueOnce(1_000).mockReturnValue(4_000);
     useWebAppStore.getState().setCurrentWebApp({
-      id: "github",
+      id: "web-domain:github.com",
       name: "GitHub",
       url: "https://github.com",
       domain: "github.com",
@@ -47,14 +47,18 @@ describe("handleNativeWebAppEvent", () => {
       timestamp: 3_000,
     });
 
-    expect(useWebAppStore.getState().currentSession?.endedAt).toBe(4_000);
+    expect(useWebAppStore.getState().currentSession).toMatchObject({
+      webAppId: "web-domain:example.com",
+      webAppName: "example.com",
+      endedAt: null,
+    });
   });
 
   it("ends the current session when Chrome tracking stops", () => {
     const now = vi.spyOn(Date, "now");
     now.mockReturnValueOnce(1_000).mockReturnValue(4_000);
     useWebAppStore.getState().setCurrentWebApp({
-      id: "github",
+      id: "web-domain:github.com",
       name: "GitHub",
       url: "https://github.com",
       domain: "github.com",

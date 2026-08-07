@@ -4,6 +4,7 @@ import { useActivityStore } from "../stores/useActivityStore";
 import { useWebAppStore } from "../stores/useWebAppStore";
 import { formatTime } from "../services/activityService";
 import { formatSessionDuration } from "../services/webAppService";
+import { AppUsageTrackingDiagnostics } from "../components/diagnostics/AppUsageTrackingDiagnostics";
 
 type TimerPageProps = {
   onPreviewResultFlow?: () => void;
@@ -90,7 +91,7 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
       </section>
 
       <section className="current-webapp-section">
-        <h3>現在のウェブアプリ</h3>
+        <h3>現在のChromeサイト</h3>
         {activeSession ? (
           <div className="current-webapp-card">
             <div className="webapp-name">{activeSession.webAppName}</div>
@@ -103,14 +104,14 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
             </div>
           </div>
         ) : (
-          <p>現在、対応するウェブアプリは検出されていません。</p>
+          <p>現在、Chromeで計測対象のサイトは検出されていません。</p>
         )}
       </section>
 
       <section className="web-apps-section">
-        <h3>ウェブアプリ別利用時間</h3>
+        <h3>Chromeサイト別利用時間</h3>
         {!Array.isArray(usageStats) || usageStats.length === 0 ? (
-          <p>ウェブアプリの使用が検出されていません。</p>
+          <p>Chromeサイトの使用が検出されていません。</p>
         ) : (
           <ul className="webapp-list">
             {usageStats.map((stat) => {
@@ -135,6 +136,8 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
           </ul>
         )}
       </section>
+
+      {import.meta.env.DEV ? <AppUsageTrackingDiagnostics /> : null}
 
       {import.meta.env.DEV && onPreviewResultFlow ? (
         <section className="result-preview-entry" aria-label="開発用機能">

@@ -2,9 +2,9 @@
 
 Windows向けのデスクトップアプリとして、PC作業中に使った時間を金額換算して見える化するために開発中のアプリです。
 
-現在は、4画面のUI、アプリ起動からの経過時間表示、自動起動設定、通知の動作確認、システムトレイ、前面ウィンドウ情報の単発取得、Chrome拡張機能とのNative Messaging連携まで実装済みです。
+現在は、4画面のUI、アプリ起動からの経過時間表示、自動起動設定、通知の動作確認、システムトレイ、前面Windowsアプリ別の利用時間計測、Chrome拡張機能とのNative Messaging連携まで実装済みです。
 
-前面ウィンドウの実行ファイル名・タイトル・PIDは、Windows API、Tauri Command、Zodによる型・値検証付きフロントサービスを通して1回分取得できます。継続監視、アプリ別の時間計測、保存、分類、タイマー画面への表示にはまだ接続していません。
+タイマーsessionの開始と同時にRustの常駐workerが前面process名だけを継続観測し、アプリ別の利用時間snapshotを返します。開発時はタイマー画面のdiagnosticsで確認できますが、結果UI・金額換算・履歴保存にはまだ接続していません。
 
 ## 現在入っているもの
 
@@ -17,18 +17,29 @@ Windows向けのデスクトップアプリとして、PC作業中に使った�
 - Rust / TypeScript間で共有する型定義とZodスキーマ
 - Windows APIによる前面ウィンドウ情報の単発取得
 - 前面ウィンドウ取得用のTauri Commandとフロントサービス
-- Chrome拡張機能、Native Messaging Host、Tauriを通したWebアプリ検出
+- Rust常駐workerによる前面Windowsアプリの1秒samplingと、timer session単位の利用時間集計
+- session ID / startedAt / endedAtを共有するstart・snapshot・stop Commandと、Zod検証済みの公開snapshot
+- 開発時だけ表示するアプリ別利用時間diagnostics。トレイへ隠した後も計測は継続
+- Chrome拡張機能、Native Messaging Host、Tauriを通したChromeのサイト（ドメイン）別利用時間計測
 - 仕様書: [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)
 
 ## 未実装のもの
 
-- 前面ウィンドウの継続監視とアプリ別利用時間の計測
 - ウィンドウ切り替えの検知と活動レコードの作成
 - SQLite への保存
 - 分類ルールの作成・適用
 - カレンダーへの活動履歴表示
 - 実際の利用時間・設定値に基づく通知
 - 金額換算、グラフ、日別・週別・月別集計
+
+## アプリ別利用時間計測の範囲
+
+- 内部ではmillisecondsで集計し、公開snapshotでは完了した秒数だけを返します。`tracked + untracked = total`を保ちます。
+- 1秒ごとに前面processを観測し、前のprocessへ区間を割り当てます。5秒を超える観測gapは直前アプリへ加算せず、全体を未追跡にします。sampling方式のため、切り替え時刻の完全一致は保証しません。
+- Time Is Money自身、前面windowなし、Windows API失敗、不正なprocess名、1秒未満で公開されない端数は未追跡です。アイドル判定とlock/unlock検出は未実装です。
+- Chromeなどのbrowserはdesktop process一件としてだけ計測します。Chrome拡張のURL eventや`useWebAppStore`とは統合せず、二重計上しません。
+- snapshot、error、diagnostics、ログにはwindow title、URL、PID、full pathを含めません。URL受信CommandもURL本体を返却・出力しません。
+- 利用時間snapshotはメモリ上のみで、SQLiteやTauri Storeへ保存しません。#32などの後続consumerは`stopAndSnapshotAppUsage()`で固定済みの`endedAt`に対応するsnapshotを取得します。
 
 ## 使用技術
 
