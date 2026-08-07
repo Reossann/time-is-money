@@ -7,8 +7,8 @@
 - 解決したい課題: 何にどれだけ時間を使ったかを感覚ではなく数値で把握しにくいこと。
 - 想定ユーザー: Windows PC で仕事や学習をしている個人ユーザー。
 - 将来的な完成イメージ: 前面アプリやサイトの利用時間を自動で集計し、金額・カテゴリ・通知・履歴で確認できるデスクトップアプリ。
-- 現在実装済みの範囲: 4画面とナビゲーション、アプリ起動からの経過時間表示、自動起動設定、テスト通知、システムトレイ、前面Windowsアプリの継続監視とsession単位の利用時間snapshot、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・解決、Tauri Command、型・値検証付きフロントサービス。
-- 現在未実装の範囲: 利用時間からの活動レコード作成・SQLite保存・分類・金額結果UI・履歴表示、実際の利用条件に基づく通知、集計、グラフ、browser URL別利用時間、idle/lock検出、外部通信。
+- 現在実装済みの範囲: 4画面とナビゲーション、アプリ起動からの経過時間表示、自動起動設定、テスト通知、システムトレイ、前面Windowsアプリの継続監視とsession単位の利用時間snapshot、Chrome拡張機能とNative Messaging Hostによるサイト（ドメイン）別利用時間計測、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・解決、Tauri Command、型・値検証付きフロントサービス。
+- 現在未実装の範囲: 利用時間からの活動レコード作成・SQLite保存・分類・金額結果UI・履歴表示、実際の利用条件に基づく通知、集計、グラフ、idle/lock検出、外部通信。
 
 ## 2. 使用技術
 
@@ -148,6 +148,13 @@
 - 現時点の導入状況: 必要なWin32 featureに限定したWindowsターゲット依存として導入済み。
 - 導入する予定の段階: 前面ウィンドウの単発取得へ導入済み。追加APIは用途が決まった段階で検討する。
 
+### Chrome Native Messaging
+
+- 何か: Chrome拡張機能とローカルのネイティブ実行ファイルをstdin/stdoutで接続する仕組み。
+- このアプリでの担当: アクティブなHTTP/HTTPS URLをサニタイズしてNative Messaging Hostへ渡し、localhostブリッジ経由でTauriへ通知する。
+- 現時点の導入状況: 開発用拡張機能IDの固定、Host登録、URL変更・計測停止、接続失敗表示、タイマー画面への現在セッション反映まで実装済み。
+- プライバシー境界: query、hash、URL内の認証情報を拡張機能とHostの両側で除去する。クラウド送信は行わない。
+
 ## 3. アーキテクチャ
 
 - React・TypeScript 側が担当する処理: 画面表示、ナビゲーション、アプリ起動からの経過時間状態、自動起動設定、時給設定の検証・解決・repository、サービス層を通したCommand呼び出しと実行時検証。
@@ -160,6 +167,7 @@
 - 時給解決と金額計算の流れ: consumerはraw process名を`resolveHourlyRateYen()`へ渡し、返された0以上の有限数を`calculateMoneyBreakdown()`へ渡す。時給serviceは#13の金額式や丸めを持たない。
 - 現在の利用時間計測の流れ: Rust workerが1秒samplingで前面process名を観測し、millisecondsで排他的に集計する。5秒超gap、self、null、取得失敗はuntrackedにする。stop時は最初の`endedAt`でfinal snapshotを固定し、後続consumerは同じ境界でretryできる。
 - 将来的な活動計測の流れ: 固定snapshotを活動レコードへ変換し、SQLiteへ保存する予定。
+- Chromeサイト計測の流れ: 拡張機能が前面タブのHTTP/HTTPS URLからドメインだけを取り出し、成功ACKを受けた値だけを送信済みとして保持する。Native Messaging HostがTauriへ転送し、フロントはZod検証後にドメイン単位のZustandセッションを開始・終了する。URLのpath、query、hash、ページタイトルは保存・表示しない。
 - 将来的な分類ルール適用の流れ: `AppRule` に基づいて process/title/domain を分類し、カテゴリを決定する予定。
 - 現在の通知処理: Rust側の通知サービスが起動5秒後にスパルタ口調の仮通知をランダム送信する。将来は実際の活動時間と設定値を使う条件へ置き換える。
 
@@ -177,6 +185,8 @@ flowchart LR
   CMD --> RUST[Rust Services / Models]
   RUST --> OS[Windows API / Tray / Notification]
   RUST --> DB[(SQLite)]
+  EXT[Chrome Extension] --> HOST[Native Messaging Host]
+  HOST --> RUST
 ```
 
 ### アプリ別利用時間の契約
@@ -185,7 +195,7 @@ flowchart LR
 - public snapshotは`apps / trackedDurationSeconds / untrackedDurationSeconds / durationSeconds`のみを返し、`tracked + untracked = total`を検証する。
 - process名は#52と同じtrim・NFC・lowercaseでcanonical app IDへ統合してから秒へ丸める。case/NFC差は一appへmergeする。
 - window title、URL、PID、full pathはwire、state、DOM、error、ログ、保存payloadへ渡さない。raw Windows/Tokio errorも公開しない。
-- browserは`chrome.exe`等のdesktop processとして一件だけ計測する。Chrome拡張のURL eventは別機能であり、このtimelineへ流入させない。idle/lock判定、URL別集計、結果UI、金額換算、永続化は対象外である。
+- browserは`chrome.exe`等のdesktop processとして一件だけ計測する。同時にChrome拡張がドメイン別の別表示を作るが、desktop snapshotへ加算しないため二重計上しない。idle/lock判定、結果UI、金額換算、永続化は対象外である。
 
 ## 4. ファイル構成
 
@@ -212,7 +222,7 @@ flowchart LR
 - 何か: 画面単位の React コンポーネントを置く場所。
 - 何のために存在するか: タイマー / カレンダー / グラフ / 設定を独立させるため。
 - 将来的にどの処理を担当するか: 各画面のデータ表示、入力、状態表示。
-- 現時点でどこまで実装されているか: タイマーは起動経過時間とdevelopment限定のアプリ別利用時間diagnosticsを表示し、設定は自動起動、デフォルト時給、前面Windowsアプリの登録、アプリ別上書き時給を操作できる。カレンダーとグラフはページ名と説明のみ。
+- 現時点でどこまで実装されているか: タイマーは起動経過時間、development限定のWindowsアプリ別利用時間diagnostics、Chrome拡張機能の接続状態、現在のサイト、ドメイン別利用時間を表示する。設定は自動起動、デフォルト時給、前面Windowsアプリの登録、アプリ別上書き時給を操作できる。カレンダーとグラフはページ名と説明のみ。
 - どのファイルから呼ばれる予定か: `src/App.tsx` から呼ばれる。
 - 今後どのような機能を追加する場所か: 集計グラフ、一覧、編集フォーム。
 
@@ -407,10 +417,10 @@ npm run tauri dev
 
 ## 9. 実装状況
 
-- 現在の主要構成: React画面、Zustandストア、Zodスキーマ、TypeScriptサービス・repository、Tauri Store Plugin、Rustモデル・platform・Command、Tauri通知・自動起動・システムトレイ設定。
-- 現在動作する機能: 4画面の切り替え、アプリ起動からの経過時間表示、前面Windowsアプリ別の利用時間snapshot、自動起動の切り替え、テスト通知、トレイ常駐と再表示・終了、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・変更・解除・再起動復元、分類済みレコードの金額換算と集計を行うTypeScript純粋関数。
+- 現在の主要構成: React画面、Zustandストア、Zodスキーマ、TypeScriptサービス・repository、Chrome拡張機能、Native Messaging Host、Tauri Store Plugin、Rustモデル・platform・Command、Tauri通知・自動起動・システムトレイ設定。
+- 現在動作する機能: 4画面の切り替え、アプリ起動からの経過時間表示、前面Windowsアプリ別の利用時間snapshot、Chromeのドメイン別利用時間表示、自動起動の切り替え、テスト通知、トレイ常駐と再表示・終了、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・変更・解除・再起動復元、分類済みレコードの金額換算と集計を行うTypeScript純粋関数。
 - プレースホルダーとして存在するファイル: `src/services/settingsService.ts`, `src/services/tauriService.ts`, `src-tauri/src/commands/settings.rs`。
-- 未実装の機能: snapshotからの活動レコード作成・SQLite保存、分類、履歴表示、金額結果のUI表示・保存への接続、browser URL別時間、idle/lock検出、クラウド通信。
+- 未実装の機能: snapshotからの活動レコード作成・SQLite保存、分類、履歴表示、金額結果のUI表示・保存への接続、idle/lock検出、クラウド通信。
 - 将来実装する機能: 活動レコード作成、ルール適用、SQLite保存、実際の利用条件に基づく通知、日次・週次・月次集計。
 - Windows 限定の処理: 前面windowのprocess名取得と継続監視。アイドル検知などは将来の対象。
 - 現時点で導入していないライブラリやプラグイン: Tauri SQL Plugin。

@@ -3732,6 +3732,7 @@ dependencies = [
  "tokio",
  "url",
  "windows",
+ "winreg 0.55.0",
 ]
 
 [[package]]

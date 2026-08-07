@@ -1,5 +1,7 @@
 pub mod commands;
 pub mod models;
+pub mod native_bridge;
+pub mod native_messaging;
 pub mod platform;
 pub mod services;
 
@@ -63,11 +65,13 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(app_usage_tracker)
+        .manage(native_bridge::NativeBridgeState::default())
         .invoke_handler(tauri::generate_handler![
             commands::activity::get_active_window_info,
             commands::activity::start_app_usage_tracking,
             commands::activity::get_app_usage_tracking_snapshot,
             commands::activity::stop_app_usage_tracking,
+            native_bridge::get_latest_native_web_app_event,
             receive_web_app_url
         ])
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -82,6 +86,9 @@ pub fn run() {
                     None,
                 ))?;
             }
+
+            services::native_bridge_service::start_native_bridge_listener(app.handle().clone());
+            services::native_messaging_setup_service::ensure_native_messaging_host_registered();
 
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
@@ -145,6 +152,7 @@ pub fn run() {
                     eprintln!("通知送信に失敗しました: {error}");
                 }
             });
+
             Ok(())
         })
         .run(tauri::generate_context!())

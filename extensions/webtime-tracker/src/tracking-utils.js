@@ -1,18 +1,7 @@
 const WEB_APP_MATCHERS = [
   {
-    name: "Google Sheets",
+    name: "Google Workspace",
     domains: ["docs.google.com"],
-    pathPrefixes: ["/spreadsheets"],
-  },
-  {
-    name: "Google Slides",
-    domains: ["docs.google.com"],
-    pathPrefixes: ["/presentation"],
-  },
-  {
-    name: "Google Docs",
-    domains: ["docs.google.com"],
-    pathPrefixes: ["/document"],
   },
   { name: "Gmail", domains: ["mail.google.com"] },
   { name: "Google Drive", domains: ["drive.google.com"] },
@@ -30,7 +19,8 @@ function matchesDomain(hostname, domain) {
 }
 
 /**
- * 計測対象として扱えるURLだけを返し、機密情報になり得る部分を除去する。
+ * 計測対象として扱えるURLからドメインだけを返す。
+ * path、query、hash、認証情報はページ名や文書IDを含み得るため保持しない。
  * @param {string} rawUrl
  * @returns {string | null}
  */
@@ -44,6 +34,7 @@ export function sanitizeTrackedUrl(rawUrl) {
 
     url.username = "";
     url.password = "";
+    url.pathname = "/";
     url.search = "";
     url.hash = "";
 
@@ -85,13 +76,6 @@ export function inferAppName(rawUrl) {
       );
 
       if (!domainMatches) {
-        continue;
-      }
-
-      if (
-        matcher.pathPrefixes &&
-        !matcher.pathPrefixes.some((prefix) => url.pathname.startsWith(prefix))
-      ) {
         continue;
       }
 

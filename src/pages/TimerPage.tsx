@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { useActivityStore } from "../stores/useActivityStore";
 import { useWebAppStore } from "../stores/useWebAppStore";
 import { formatTime } from "../services/activityService";
@@ -8,9 +10,44 @@ type TimerPageProps = {
   onPreviewResultFlow?: () => void;
 };
 
+function getActiveSessionSeconds(startedAt: number, now: number): number {
+  return Math.max(0, Math.floor((now - startedAt) / 1000));
+}
+
 export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
   const elapsedSeconds = useActivityStore((state) => state.elapsedSeconds);
+  const currentSession = useWebAppStore((state) => state.currentSession);
   const usageStats = useWebAppStore((state) => state.usageStats);
+  const nativeBridgeStatus = useWebAppStore(
+    (state) => state.nativeBridgeStatus,
+  );
+
+  const activeSession =
+    currentSession?.endedAt === null ? currentSession : null;
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!activeSession) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [activeSession]);
+
+  const activeSessionSeconds = activeSession
+    ? getActiveSessionSeconds(activeSession.startedAt, currentTime)
+    : 0;
+  const currentSessionStartedLabel = activeSession
+    ? new Intl.DateTimeFormat("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(activeSession.startedAt)
+    : null;
 
   let formattedTime: string;
   try {
@@ -42,23 +79,60 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
         <p>アプリを開いてからの利用時間を表示しています。</p>
       </section>
 
+      <section className="current-webapp-section">
+        <h3>Chrome拡張機能との接続</h3>
+        <p>
+          {nativeBridgeStatus === "connected"
+            ? "接続済み"
+            : nativeBridgeStatus === "invalid-event"
+              ? "受信データを確認できませんでした"
+              : "接続待機中"}
+        </p>
+      </section>
+
+      <section className="current-webapp-section">
+        <h3>現在のChromeサイト</h3>
+        {activeSession ? (
+          <div className="current-webapp-card">
+            <div className="webapp-name">{activeSession.webAppName}</div>
+            <div className="current-webapp-meta">
+              <span>セッション計測中</span>
+              {currentSessionStartedLabel && (
+                <span>開始: {currentSessionStartedLabel}</span>
+              )}
+              <span>{formatSessionDuration(activeSessionSeconds)}</span>
+            </div>
+          </div>
+        ) : (
+          <p>現在、Chromeで計測対象のサイトは検出されていません。</p>
+        )}
+      </section>
+
       <section className="web-apps-section">
-        <h3>ウェブアプリ別利用時間</h3>
+        <h3>Chromeサイト別利用時間</h3>
         {!Array.isArray(usageStats) || usageStats.length === 0 ? (
-          <p>ウェブアプリの使用が検出されていません。</p>
+          <p>Chromeサイトの使用が検出されていません。</p>
         ) : (
           <ul className="webapp-list">
-            {usageStats.map((stat) => (
-              <li key={stat.webAppId} className="webapp-item">
-                <div className="webapp-name">{stat.webAppName}</div>
-                <div className="webapp-duration">
-                  {formatSessionDuration(stat.cumulativeSeconds)}
-                </div>
-                <div className="webapp-session-count">
-                  セッション数: {stat.sessionCount}
-                </div>
-              </li>
-            ))}
+            {usageStats.map((stat) => {
+              const displayedSeconds =
+                stat.cumulativeSeconds +
+                (activeSession?.webAppId === stat.webAppId
+                  ? activeSessionSeconds
+                  : 0);
+
+              return (
+                <li key={stat.webAppId} className="webapp-item">
+                  <div className="webapp-name">{stat.webAppName}</div>
+                  <div className="webapp-duration">
+                    {formatSessionDuration(displayedSeconds)}
+                  </div>
+                  <div className="webapp-session-count">
+                    セッション数: {stat.sessionCount}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

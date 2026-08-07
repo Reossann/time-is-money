@@ -2,7 +2,7 @@
 
 Windows向けのデスクトップアプリとして、PC作業中に使った時間を金額換算して見える化するために開発中のアプリです。
 
-現在は、4画面のUI、アプリ起動からの経過時間表示、自動起動設定、通知の動作確認、システムトレイ、前面Windowsアプリ別の利用時間計測まで実装済みです。
+現在は、4画面のUI、アプリ起動からの経過時間表示、自動起動設定、通知の動作確認、システムトレイ、前面Windowsアプリ別の利用時間計測、Chrome拡張機能とのNative Messaging連携まで実装済みです。
 
 タイマーsessionの開始と同時にRustの常駐workerが前面process名だけを継続観測し、アプリ別の利用時間snapshotを返します。開発時はタイマー画面のdiagnosticsで確認できますが、結果UI・金額換算・履歴保存にはまだ接続していません。
 
@@ -20,6 +20,7 @@ Windows向けのデスクトップアプリとして、PC作業中に使った�
 - Rust常駐workerによる前面Windowsアプリの1秒samplingと、timer session単位の利用時間集計
 - session ID / startedAt / endedAtを共有するstart・snapshot・stop Commandと、Zod検証済みの公開snapshot
 - 開発時だけ表示するアプリ別利用時間diagnostics。トレイへ隠した後も計測は継続
+- Chrome拡張機能、Native Messaging Host、Tauriを通したChromeのサイト（ドメイン）別利用時間計測
 - 仕様書: [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)
 
 ## 未実装のもの
@@ -29,7 +30,6 @@ Windows向けのデスクトップアプリとして、PC作業中に使った�
 - 分類ルールの作成・適用
 - カレンダーへの活動履歴表示
 - 実際の利用時間・設定値に基づく通知
-- ブラウザ拡張機能連携
 - 金額換算、グラフ、日別・週別・月別集計
 
 ## アプリ別利用時間計測の範囲
@@ -130,7 +130,7 @@ npm run test:watch
 Rustのテストを実行します。
 
 ```bash
-cargo test --manifest-path src-tauri/Cargo.toml --all-targets --all-features
+npm run test:rust
 ```
 
 Rustの単体テストは対象モジュール内へ`#[cfg(test)] mod tests`として追加します。

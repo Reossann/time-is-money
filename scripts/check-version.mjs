@@ -1,6 +1,6 @@
-/* global console, process */
 
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -77,6 +77,42 @@ function readTagArgument() {
   throw new Error("引数は省略するか、--tag vX.Y.Z の形式で指定してください");
 }
 
+function deriveChromeExtensionId(publicKey) {
+  if (typeof publicKey !== "string" || publicKey.length === 0) {
+    throw new Error("extensions/webtime-tracker/manifest.json#key が必要です");
+  }
+
+  const digest = createHash("sha256")
+    .update(Buffer.from(publicKey, "base64"))
+    .digest()
+    .subarray(0, 16);
+
+  return Array.from(digest, (byte) =>
+    [byte >> 4, byte & 0x0f]
+      .map((nibble) => String.fromCharCode("a".charCodeAt(0) + nibble))
+      .join(""),
+  ).join("");
+}
+
+function assertNativeMessagingOriginsMatch() {
+  const extensionManifest = readJson("extensions/webtime-tracker/manifest.json");
+  const hostManifest = readJson("extensions/webtime-tracker/host-manifest.json");
+  const nativeConfig = readJson("src-tauri/native-messaging.config.json");
+  const extensionId = deriveChromeExtensionId(extensionManifest.key);
+  const expectedOrigin = `chrome-extension://${extensionId}/`;
+
+  if (
+    hostManifest.allowed_origins?.length !== 1 ||
+    hostManifest.allowed_origins[0] !== expectedOrigin ||
+    nativeConfig.allowedOrigins?.length !== 1 ||
+    nativeConfig.allowedOrigins[0] !== expectedOrigin
+  ) {
+    throw new Error(
+      `Native Messagingのallowed originが拡張機能ID ${extensionId} と一致しません`,
+    );
+  }
+}
+
 function main() {
   const packageJson = readJson("package.json");
   const packageLock = readJson("package-lock.json");
@@ -91,6 +127,8 @@ function main() {
     ["src-tauri/tauri.conf.json#version", tauriConfig.version],
   ];
   const expectedVersion = packageJson.version;
+
+  assertNativeMessagingOriginsMatch();
 
   if (typeof expectedVersion !== "string" || expectedVersion.length === 0) {
     throw new Error("package.json#version が空、または文字列ではありません");
