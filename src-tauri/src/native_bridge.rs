@@ -118,6 +118,8 @@ pub fn start_listener(app_handle: tauri::AppHandle) -> io::Result<()> {
 }
 
 fn handle_connection(app_handle: &tauri::AppHandle, stream: &mut TcpStream) -> io::Result<()> {
+    eprintln!("🟢 [Bridge] Connection accepted");
+
     let Some(payload) = read_frame(stream).map_err(|error| match error {
         NativeMessagingFrameError::Io(io_error) => io_error,
         NativeMessagingFrameError::MessageTooLarge(message_length) => io::Error::new(
@@ -126,25 +128,31 @@ fn handle_connection(app_handle: &tauri::AppHandle, stream: &mut TcpStream) -> i
         ),
     })?
     else {
+        eprintln!("🟡 [Bridge] Empty payload received");
         return Ok(());
     };
 
+    eprintln!("🟢 [Bridge] Payload received, size: {} bytes", payload.len());
+
     let ack = match serde_json::from_slice::<NativeWebAppChange>(&payload) {
-        Ok(change) => match app_handle.emit(NATIVE_BRIDGE_EVENT, &change) {
-            Ok(()) => NativeBridgeAck::ok("native web app change delivered"),
-            Err(error) => NativeBridgeAck::error(format!("event delivery failed: {error}")),
+        Ok(change) => {
+            eprintln!("🟢 [Bridge] Deserialized change: url={}, timestamp={}", change.url, change.timestamp);
+            match app_handle.emit(NATIVE_BRIDGE_EVENT, &change) {
+                Ok(()) => {
+                    eprintln!("🟢 [Bridge] Event emitted successfully!");
+                    NativeBridgeAck::ok("native web app change delivered")
+                },
+                Err(error) => {
+                    eprintln!("🔴 [Bridge] Event emission failed: {}", error);
+                    NativeBridgeAck::error(format!("event delivery failed: {error}"))
+                },
+            }
         },
-        Err(error) => NativeBridgeAck::error(format!("invalid native bridge payload: {error}")),
+        Err(error) => {
+            eprintln!("🔴 [Bridge] Deserialization failed: {}", error);
+            NativeBridgeAck::error(format!("invalid native bridge payload: {error}"))
+        }
     };
-
-    let response = serde_json::to_vec(&ack).map_err(|error| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("serialize native bridge ack failed: {error}"),
-        )
-    })?;
-
-    write_frame(stream, &response)
 }
 
 #[cfg(test)]
