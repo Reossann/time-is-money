@@ -170,6 +170,200 @@ button {
   line-height: 1.8;
 }
 
+.graph-period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0 8px;
+}
+
+.graph-period-controls__button {
+  min-width: 64px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.graph-period-controls__button--active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.graph-metric-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.graph-metric-controls__button {
+  min-width: 96px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.graph-metric-controls__button--active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.graph-section {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.graph-legend {
+  margin: 0;
+  font-weight: 700;
+}
+
+.graph-demo-notice {
+  justify-self: start;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.trend-chart-wrapper {
+  overflow-x: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-panel);
+}
+
+.trend-chart {
+  display: block;
+  min-width: 560px;
+  width: 100%;
+  height: auto;
+}
+
+.trend-chart__axis {
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.trend-chart__grid-line {
+  stroke: rgba(23, 32, 51, 0.1);
+  stroke-dasharray: 4 6;
+  stroke-width: 1;
+}
+
+.trend-chart__tick-label {
+  fill: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.trend-chart__tick-label--x {
+  text-anchor: middle;
+}
+
+.trend-chart__tick-label--y {
+  text-anchor: end;
+}
+
+.trend-chart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.trend-chart__point {
+  fill: var(--accent);
+  stroke: white;
+  stroke-width: 2;
+}
+
+.trend-chart__point:focus {
+  outline: none;
+  stroke: var(--text);
+  stroke-width: 4;
+}
+
+.trend-chart__point--selected {
+  stroke: var(--text);
+  stroke-width: 3;
+}
+
+.trend-chart__selection {
+  margin: 8px 0 0;
+  font-weight: 700;
+}
+
+.graph-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+  border: 2px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.graph-table caption {
+  margin-bottom: 8px;
+  text-align: left;
+  font-weight: 700;
+}
+
+.graph-table th,
+.graph-table td {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.graph-table thead th {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 800;
+  text-align: center;
+}
+
+.graph-table tbody th {
+  background: white;
+  font-weight: 800;
+}
+
+.graph-table th:first-child,
+.graph-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 72px;
+  border-right: 2px solid rgba(23, 32, 51, 0.18);
+  background: var(--accent-soft);
+}
+
+.graph-table tbody th:first-child {
+  background: white;
+}
+
+.graph-table thead th:first-child {
+  z-index: 2;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.graph-table td {
+  min-width: 88px;
+}
+
 .timer-section,
 .current-webapp-section,
 .web-apps-section {
