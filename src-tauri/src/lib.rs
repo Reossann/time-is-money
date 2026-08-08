@@ -12,7 +12,10 @@ use tauri::{
     AppHandle, Manager, WindowEvent,
 };
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_sql::{Migration, MigrationKind};
 use tauri_plugin_store::StoreExt;
+
+const SESSION_RECORD_DATABASE_URL: &str = "sqlite:timeismoney.db";
 
 use models::settings::AppSettings;
 use services::{
@@ -102,6 +105,15 @@ fn load_notification_settings(app_handle: &AppHandle) -> AppSettings {
     }
 }
 
+fn session_record_migrations() -> Vec<Migration> {
+    vec![Migration {
+        version: 1,
+        description: "create_session_records",
+        sql: include_str!("../migrations/0001_session_records.sql"),
+        kind: MigrationKind::Up,
+    }]
+}
+
 pub fn run() {
     let app_usage_tracker = AppUsageTracker::for_current_process()
         .expect("前面アプリ利用時間trackerを初期化できませんでした");
@@ -117,6 +129,11 @@ pub fn run() {
             native_bridge::get_latest_native_web_app_event,
             receive_web_app_url
         ])
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations(SESSION_RECORD_DATABASE_URL, session_record_migrations())
+                .build(),
+        )
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {

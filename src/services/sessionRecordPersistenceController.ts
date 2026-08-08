@@ -1,7 +1,5 @@
-import {
-  createInMemorySessionRecordRepository,
-  type SessionRecordRepository,
-} from "../repositories/sessionRecordRepository";
+import type { SessionRecordRepository } from "../repositories/sessionRecordRepository";
+import { createSqliteSessionRecordRepository } from "../repositories/sqliteSessionRecordRepository";
 import { useSessionRecordSaveStore } from "../stores/useSessionRecordSaveStore";
 import type {
   SessionRecord,
@@ -45,9 +43,9 @@ type PersistenceState = {
   savedRecord: SessionRecord | null;
 };
 
-// Interim default: the in-memory repository keeps the app working before the
-// SQLite-backed repository lands (#7 / task group 4). Swap this default there.
-const defaultRepository = createInMemorySessionRecordRepository();
+// Runtime default: the SQLite-backed repository (@tauri-apps/plugin-sql). Tests
+// inject their own repository via configure...ForTests.
+const defaultRepository = createSqliteSessionRecordRepository();
 
 const defaultDependencies: ControllerDependencies = {
   getFinalizedSessionResult,

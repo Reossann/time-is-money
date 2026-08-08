@@ -39,7 +39,7 @@ export interface SessionRecordRepository {
   remove(sessionId: string, ownerId: string): Promise<void>;
 }
 
-function createRepositoryError(
+export function createSessionRecordRepositoryError(
   code: SessionRecordRepositoryErrorCode,
 ): SessionRecordRepositoryError {
   const messages: Record<SessionRecordRepositoryErrorCode, string> = {
@@ -52,6 +52,8 @@ function createRepositoryError(
   };
   return new SessionRecordRepositoryError(code, messages[code]);
 }
+
+const createRepositoryError = createSessionRecordRepositoryError;
 
 function canonicalizeRecord(value: unknown): SessionRecord {
   const parsed = sessionRecordSchema.parse(value);
