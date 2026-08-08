@@ -35,6 +35,19 @@ describe("sendNativeMessage", () => {
     ).rejects.toMatchObject({ code: "HOST_UNREGISTERED" });
   });
 
+  it("classifies a Japanese unregistered-host error", async () => {
+    const runtime = createRuntime({
+      response: undefined,
+      lastError: {
+        message: "指定されたネイティブ メッセージング ホストが見つかりません。",
+      },
+    });
+
+    await expect(
+      sendNativeMessage(runtime, "com.timeismoney.app", { type: "URL_CHANGE" }),
+    ).rejects.toMatchObject({ code: "HOST_UNREGISTERED" });
+  });
+
   it("rejects APP_UNAVAILABLE responses", async () => {
     const runtime = createRuntime({
       response: { success: false, code: "APP_UNAVAILABLE" },

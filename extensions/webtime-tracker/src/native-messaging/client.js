@@ -7,15 +7,15 @@ export const nativeConnectionState = Object.freeze({
 });
 
 export class NativeMessagingClientError extends Error {
-  constructor(code, message) {
-    super(message);
+  constructor(code, message, detail) {
+    super(detail ? `${detail}: ${message}` : message);
     this.name = "NativeMessagingClientError";
     this.code = code;
   }
 }
 
 function runtimeErrorCode(message) {
-  return /native messaging host.*not found|specified native messaging host/i.test(
+  return /native messaging host.*(?:not found|is not registered)|specified native messaging host|ネイティブ\s*メッセージング\s*ホスト.*(?:見つかりません|登録されていません|指定されていません)/i.test(
     message,
   )
     ? "HOST_UNREGISTERED"
@@ -44,9 +44,12 @@ export function sendNativeMessage(runtime, hostName, message) {
       const lastError = runtime.lastError;
 
       if (lastError) {
+        const runtimeMessage = lastError.message ?? "Chrome did not provide an error message";
+
         reject(
           new NativeMessagingClientError(
-            runtimeErrorCode(lastError.message ?? ""),
+            runtimeErrorCode(runtimeMessage),
+            runtimeMessage,
             "Native Messaging Hostへ接続できませんでした",
           ),
         );

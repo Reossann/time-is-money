@@ -312,7 +312,11 @@ pub fn is_registered(_install_dir: &Path) -> bool {
 }
 
 fn format_windows_path(path: &Path) -> String {
-    path.to_string_lossy().replace('/', "\\")
+    let path = path.to_string_lossy().replace('/', "\\");
+
+    path.strip_prefix(r"\\?\")
+        .unwrap_or(&path)
+        .to_string()
 }
 
 fn write_manifest(path: &Path, contents: &str) -> Result<(), NativeMessagingSetupError> {
@@ -445,6 +449,10 @@ mod tests {
             .as_str()
             .expect("path should exist")
             .ends_with(HOST_EXE_NAME));
+        assert!(!parsed["path"]
+            .as_str()
+            .expect("path should exist")
+            .starts_with(r"\\?\"));
         assert_eq!(
             parsed["allowed_origins"]
                 .as_array()
