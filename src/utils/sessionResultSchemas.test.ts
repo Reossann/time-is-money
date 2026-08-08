@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import sharedFixture from "../../fixtures/contracts/session-result-v1.json";
 import { validSessionResult } from "../test/fixtures/sessionResult";
 import { moneyBreakdownSchema, sessionResultSchema } from "./sessionResultSchemas";
 
@@ -24,6 +25,10 @@ describe("moneyBreakdownSchema", () => {
 });
 
 describe("sessionResultSchema", () => {
+  it("accepts the shared Rust/TypeScript fixture", () => {
+    expect(sessionResultSchema.parse(sharedFixture)).toEqual(sharedFixture);
+  });
+
   it("accepts the version 1 result with an unclassified app", () => {
     expect(sessionResultSchema.parse(validSessionResult)).toEqual(
       validSessionResult,
