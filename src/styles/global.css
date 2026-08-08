@@ -833,6 +833,34 @@ button {
   font-weight: 700;
 }
 
+.calendar-save {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calendar-save__status {
+  margin: 0;
+  font-weight: 700;
+}
+
+.calendar-save__error {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-muted);
+  line-height: 1.75;
+}
+
+.calendar-save__retry,
+.calendar-save__undo {
+  align-self: flex-start;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-weight: 700;
+}
+
 .result-flow-controls {
   display: flex;
   flex-wrap: wrap;

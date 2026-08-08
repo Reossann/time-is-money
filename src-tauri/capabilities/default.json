@@ -16,6 +16,10 @@
     "store:allow-get",
     "store:allow-set",
     "store:allow-reload",
-    "store:allow-save"
+    "store:allow-save",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-close"
   ]
 }
