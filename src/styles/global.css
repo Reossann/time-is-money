@@ -139,11 +139,6 @@ button {
   color: rgba(245, 247, 251, 0.7);
 }
 
-.sidebar__item-note {
-  font-size: 0.9rem;
-  color: rgba(245, 247, 251, 0.7);
-}
-
 .app-main {
   padding: 28px;
 }
