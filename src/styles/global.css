@@ -100,7 +100,9 @@ button {
   background: rgba(255, 255, 255, 0.05);
   color: inherit;
   display: grid;
-  gap: 4px;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
+  align-items: center;
 }
 
 .sidebar__item--active {
@@ -110,6 +112,26 @@ button {
 
 .sidebar__item-label {
   font-weight: 700;
+}
+
+.sidebar__item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: rgba(245, 247, 251, 0.9);
+}
+
+.sidebar__item--active .sidebar__item-icon {
+  color: var(--accent);
+}
+
+.sidebar__item-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .sidebar__item-note {

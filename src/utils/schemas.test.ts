@@ -27,6 +27,8 @@ const validAppSettings = {
   notificationThresholdMinutes: 30,
   idleThresholdMinutes: 5,
   notificationsEnabled: true,
+  notificationTone: "sparta",
+  notificationIntervalMinutes: 30,
 } as const satisfies AppSettings;
 
 const validAppRule = {
@@ -100,6 +102,24 @@ describe("appSettingsSchema", () => {
       appSettingsSchema.safeParse({
         ...validAppSettings,
         notificationsEnabled: "yes",
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        ...validAppSettings,
+        notificationTone: "aggressive",
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        ...validAppSettings,
+        notificationIntervalMinutes: 45,
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        ...validAppSettings,
+        notificationIntervalMinutes: 1,
       }).success,
     ).toBe(false);
   });
