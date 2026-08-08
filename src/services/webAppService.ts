@@ -2,86 +2,60 @@ import type { WebApp } from "../types/activity";
 
 /**
  * ウェブアプリの定義
- * URLのドメイン/パターンからアプリを判定するためのマッピング
+ * URLのドメインから表示名を決めるためのマッピング。
+ * pathはページ名や文書IDを含み得るため、計測キーに使わない。
  */
-const WEB_APPS_DATABASE: Array<{
-  id: string;
+const WEB_DOMAIN_DATABASE: Array<{
   name: string;
   domain: string;
   domains: string[];
-  pathPrefixes?: string[];
 }> = [
   {
-    id: "google-docs",
-    name: "Google Docs",
+    name: "Google Workspace",
     domain: "docs.google.com",
     domains: ["docs.google.com"],
-    pathPrefixes: ["/document"],
   },
   {
-    id: "google-sheets",
-    name: "Google Sheets",
-    domain: "docs.google.com",
-    domains: ["docs.google.com"],
-    pathPrefixes: ["/spreadsheets"],
-  },
-  {
-    id: "google-slides",
-    name: "Google Slides",
-    domain: "docs.google.com",
-    domains: ["docs.google.com"],
-    pathPrefixes: ["/presentation"],
-  },
-  {
-    id: "gmail",
     name: "Gmail",
     domain: "mail.google.com",
     domains: ["mail.google.com"],
   },
   {
-    id: "google-drive",
     name: "Google Drive",
     domain: "drive.google.com",
     domains: ["drive.google.com"],
   },
   {
-    id: "slack",
     name: "Slack",
     domain: "app.slack.com",
     domains: ["slack.com"],
   },
   {
-    id: "notion",
     name: "Notion",
     domain: "notion.so",
     domains: ["notion.so", "app.notionforms.com"],
   },
   {
-    id: "github",
     name: "GitHub",
     domain: "github.com",
     domains: ["github.com"],
   },
   {
-    id: "youtube",
     name: "YouTube",
     domain: "youtube.com",
     domains: ["youtube.com", "youtu.be"],
   },
   {
-    id: "twitter",
     name: "X（旧Twitter）",
     domain: "x.com",
     domains: ["x.com", "twitter.com"],
   },
   {
-    id: "chatgpt",
     name: "ChatGPT",
     domain: "chatgpt.com",
     domains: ["chatgpt.com", "chat.openai.com"],
   },
   {
-    id: "claude",
     name: "Claude",
     domain: "claude.ai",
     domains: ["claude.ai"],
@@ -92,41 +66,41 @@ function matchesDomain(hostname: string, domain: string): boolean {
   return hostname === domain || hostname.endsWith(`.${domain}`);
 }
 
+function getTrackedDomain(hostname: string): {
+  name: string;
+  domain: string;
+} {
+  for (const app of WEB_DOMAIN_DATABASE) {
+    if (app.domains.some((domain) => matchesDomain(hostname, domain))) {
+      return { name: app.name, domain: app.domain };
+    }
+  }
+
+  return { name: hostname, domain: hostname };
+}
+
 /**
- * URLからウェブアプリを判定
- * @param url - ウェブアプリのURL
- * @returns WebApp情報、または判定できない場合はnull
+ * URLからChromeサイトをドメイン単位で判定する。
+ * URLのpath・query・hashはWebAppへ保持しない。
  */
 export function detectWebApp(url: string): WebApp | null {
   try {
     const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
-
-    // マッピングからマッチするアプリを検索
-    for (const app of WEB_APPS_DATABASE) {
-      const domainMatches = app.domains.some((domain) =>
-        matchesDomain(hostname, domain),
-      );
-      const pathMatches =
-        !app.pathPrefixes ||
-        app.pathPrefixes.some((prefix) => urlObj.pathname.startsWith(prefix));
-
-      if (domainMatches && pathMatches) {
-        return {
-          id: app.id,
-          name: app.name,
-          url,
-          domain: app.domain,
-        };
-      }
+    if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:") {
+      return null;
     }
 
-    // マッチしない場合は null を返す
-    return null;
-  } catch (err) {
-    const errorMsg =
-      err instanceof Error ? err.message : "URLの解析に失敗しました";
-    console.error(`detectWebApp エラー: ${errorMsg}`, { url });
+    const hostname = urlObj.hostname.toLowerCase();
+    const trackedDomain = getTrackedDomain(hostname);
+
+    return {
+      id: `web-domain:${trackedDomain.domain}`,
+      name: trackedDomain.name,
+      url: `https://${trackedDomain.domain}/`,
+      domain: trackedDomain.domain,
+    };
+  } catch {
+    console.error("detectWebApp: URLの解析に失敗しました");
     return null;
   }
 }
@@ -141,7 +115,7 @@ export function extractDomain(url: string): string {
     const urlObj = new URL(url);
     return urlObj.hostname;
   } catch {
-    console.error("extractDomain エラー", { url });
+    console.error("extractDomain: URLの解析に失敗しました");
     return "";
   }
 }
@@ -151,8 +125,8 @@ export function extractDomain(url: string): string {
  * @returns WebApp 情報の配列
  */
 export function getRegisteredWebApps(): WebApp[] {
-  return WEB_APPS_DATABASE.map((app) => ({
-    id: app.id,
+  return WEB_DOMAIN_DATABASE.map((app) => ({
+    id: `web-domain:${app.domain}`,
     name: app.name,
     domain: app.domain,
     url: `https://${app.domain}`,
@@ -210,7 +184,7 @@ export function hasWebAppChanged(
 
     return currentWebApp.id !== previousWebAppId;
   } catch {
-    console.error("hasWebAppChanged エラー", { currentUrl, previousWebAppId });
+    console.error("hasWebAppChanged: URLの判定に失敗しました");
     return false;
   }
 }

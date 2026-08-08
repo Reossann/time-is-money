@@ -121,7 +121,7 @@ describe("appSettingsSchema", () => {
         ...validAppSettings,
         notificationIntervalMinutes: 1,
       }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("rejects snake_case JSON keys", () => {

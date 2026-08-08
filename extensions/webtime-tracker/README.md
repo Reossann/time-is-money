@@ -22,15 +22,24 @@ extensions/webtime-tracker/
 - **タブ切り替わり検出**: ユーザーがタブを切り替わったときに新しい URL を送信
 - **Native Messaging**: Tauri デスクトップアプリと通信
 - **ポップアップ UI**: 現在のウェブアプリと計測状況を表示
+- **接続状態表示**: Host未登録、アプリ未起動、送信失敗を成功扱いせず表示
 
 ## インストール方法
 
 ### 開発モード
 
-1. `chrome://extensions/` にアクセス
-2. **デベロッパーモード** を有効化（右上）
-3. **パッケージ化されていない拡張機能を読み込む** をクリック
-4. `extensions/webtime-tracker/` フォルダを選択
+1. プロジェクトルートで `npm run tauri dev` を実行する
+2. `chrome://extensions/` にアクセス
+3. **デベロッパーモード** を有効化（右上）
+4. **パッケージ化されていない拡張機能を読み込む** をクリック
+5. `extensions/webtime-tracker/` フォルダを選択
+6. 拡張機能IDが `cdoabncafaeaijdgbjioennfmebpgcih` であることを確認する
+
+`npm run tauri dev`はNative Messaging Hostをビルドし、アプリ起動時に現在のWindowsユーザーへHostを登録します。自動登録に失敗した場合のみ、アプリを終了してから次を実行します。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\register-native-messaging-dev.ps1
+```
 
 ### リリース版
 
@@ -41,10 +50,15 @@ extensions/webtime-tracker/
 - `tabs`: アクティブなタブを取得
 - `nativeMessaging`: Tauri アプリと通信
 - `storage`: Service Workerの再起動後も直前のURLを保持
+- `alarms`: アプリ再起動後も現在URLを再同期するため、30秒ごとに接続を確認
 
 取得対象はHTTP/HTTPSのみです。送信前にURLのクエリ文字列とハッシュを除去します。
 
 ## 通信仕様
+
+Native Messaging の正式仕様は `docs/NATIVE_MESSAGING_PROTOCOL.md` を参照してください。
+
+この README では概要のみ記載します。
 
 ### URL 送信（拡張機能 → Tauri）
 
@@ -56,14 +70,28 @@ extensions/webtime-tracker/
 }
 ```
 
+補足:
+
+- 送信対象は HTTP/HTTPS のみ
+- query / hash / 認証情報は除去して送信
+
+Chromeが非アクティブになった場合は、現在のセッションを終了するため`TRACKING_STOP`を送信します。
+
+```json
+{
+  "type": "TRACKING_STOP",
+  "timestamp": 1704067200000
+}
+```
+
 ### レスポンス（Tauri → 拡張機能）
 
 ```json
 {
   "success": true,
-  "message": "URLを受け取りました: https://...",
-  "webAppId": "google-docs",
-  "webAppName": "Google Docs"
+  "code": "OK",
+  "message": "URL accepted",
+  "sanitizedUrl": "https://docs.google.com/document/d/example"
 }
 ```
 
@@ -81,6 +109,8 @@ extensions/webtime-tracker/
 - **確認事項**:
   - Tauri アプリが起動しているか
   - ネイティブメッセージングホスト設定が正しいか
+  - 拡張機能IDが `cdoabncafaeaijdgbjioennfmebpgcih` か
+  - ポップアップに「Native Host未登録」「Time Is Moneyが未起動」が出ていないか
 
 ## 開発
 

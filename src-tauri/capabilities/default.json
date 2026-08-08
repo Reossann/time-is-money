@@ -2,12 +2,16 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "初期雛形の最小権限キャパビリティ。",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "notification:default",
+    "core:event:default",
+    "core:event:allow-listen",
     "store:allow-load",
     "store:allow-get",
     "store:allow-set",

@@ -1,5 +1,5 @@
 export type NotificationTone = "sparta" | "gentle";
-export type NotificationIntervalMinutes = 1 | 5 | 10 | 15 | 30 | 60 | 120;
+export type NotificationIntervalMinutes = 15 | 30 | 60 | 120;
 
 export type AppSettings = {
   hourlyRate: number;

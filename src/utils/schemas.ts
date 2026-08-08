@@ -28,9 +28,6 @@ export const appRuleSchema = z.object({
 export const notificationToneSchema = z.enum(["sparta", "gentle"]);
 
 export const notificationIntervalMinutesSchema = z.union([
-  z.literal(1),
-  z.literal(5),
-  z.literal(10),
   z.literal(15),
   z.literal(30),
   z.literal(60),
@@ -51,3 +48,18 @@ export const activeWindowInfoSchema = z.object({
   windowTitle: z.string(),
   processId: z.number().int().positive().max(0xffff_ffff),
 });
+export const nativeWebAppEventSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("URL_CHANGE"),
+      url: z.string().url(),
+      timestamp: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("TRACKING_STOP"),
+      timestamp: z.number().int().positive(),
+    })
+    .strict(),
+]);

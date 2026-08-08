@@ -7,7 +7,12 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["dist/**", "src-tauri/target/**", "node_modules/**"],
+    ignores: [
+      "dist/**",
+      "src-tauri/target/**",
+      "node_modules/**",
+      ".plans/**",
+    ],
   },
   js.configs.recommended,
   {
@@ -20,6 +25,17 @@ export default [
     },
     rules: {
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
+  // ↓ 追加：Node.jsで実行するビルド/ユーティリティスクリプト用
+  {
+    files: ["scripts/**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
     },
   },
   {

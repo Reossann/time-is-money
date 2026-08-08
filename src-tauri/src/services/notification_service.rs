@@ -36,6 +36,7 @@ impl NotificationTone {
 }
 
 pub const DEFAULT_TONE: NotificationTone = NotificationTone::Spartan;
+pub const DEFAULT_NOTIFICATION_INTERVAL_MINUTES: u32 = 30;
 
 pub fn pick_random_message(tone: NotificationTone) -> &'static str {
     let mut rng = rand::rng();
@@ -43,7 +44,12 @@ pub fn pick_random_message(tone: NotificationTone) -> &'static str {
 }
 
 pub fn notification_delay_from_interval(minutes: u32) -> std::time::Duration {
-    std::time::Duration::from_secs((minutes as u64) * 60)
+    let validated_minutes = match minutes {
+        15 | 30 | 60 | 120 => minutes,
+        _ => DEFAULT_NOTIFICATION_INTERVAL_MINUTES,
+    };
+
+    std::time::Duration::from_secs((validated_minutes as u64) * 60)
 }
 
 fn messages_for(tone: NotificationTone) -> &'static [&'static str] {
@@ -108,7 +114,25 @@ mod tests {
 
     #[test]
     fn converts_notification_interval_minutes_to_duration() {
-        assert_eq!(notification_delay_from_interval(15), std::time::Duration::from_secs(900));
-        assert_eq!(notification_delay_from_interval(60), std::time::Duration::from_secs(3600));
+        assert_eq!(
+            notification_delay_from_interval(15),
+            std::time::Duration::from_secs(900)
+        );
+        assert_eq!(
+            notification_delay_from_interval(60),
+            std::time::Duration::from_secs(3600)
+        );
+    }
+
+    #[test]
+    fn falls_back_to_the_default_delay_for_an_invalid_interval() {
+        assert_eq!(
+            notification_delay_from_interval(0),
+            std::time::Duration::from_secs(1800)
+        );
+        assert_eq!(
+            notification_delay_from_interval(10),
+            std::time::Duration::from_secs(1800)
+        );
     }
 }

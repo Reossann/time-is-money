@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ResultFlowPreview } from "./components/result/ResultFlowPreview";
 import { useNavigation } from "./hooks/useNavigation";
-import { useActivityStore } from "./stores/useActivityStore";
+import { useMeasurementTracking } from "./hooks/useMeasurementTracking";
 import { useResultFlowStore } from "./stores/useResultFlowStore";
 import { TimerPage } from "./pages/TimerPage";
 import { CalendarPage } from "./pages/CalendarPage";
 import { GraphPage } from "./pages/GraphPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { startNativeWebAppBridgeListener } from "./services/nativeBridgeService";
 import type { NavigationId } from "./constants/navigation";
 
 const pageMap: Record<NavigationId, React.ReactNode> = {
@@ -20,15 +21,29 @@ const pageMap: Record<NavigationId, React.ReactNode> = {
 export function App() {
   const { currentPage, setCurrentPage } = useNavigation();
   const [isResultFlowOpen, setIsResultFlowOpen] = useState(false);
+  useMeasurementTracking();
 
   useEffect(() => {
-    useActivityStore.getState().startMeasurement();
+    let unlisten: (() => void) | undefined;
+    let isDisposed = false;
 
-    const intervalId = window.setInterval(() => {
-      useActivityStore.getState().syncElapsed();
-    }, 1000);
+    startNativeWebAppBridgeListener()
+      .then((dispose) => {
+        if (isDisposed) {
+          dispose();
+          return;
+        }
 
-    return () => window.clearInterval(intervalId);
+        unlisten = dispose;
+      })
+      .catch((error) => {
+        console.error("Native WebApp bridge listener の開始に失敗しました", error);
+      });
+
+    return () => {
+      isDisposed = true;
+      unlisten?.();
+    };
   }, []);
 
   const openResultFlowPreview = () => {

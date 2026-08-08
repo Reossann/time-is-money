@@ -59,3 +59,14 @@ export type WebAppUsageStats = {
   cumulativeSeconds: number;     // 累積利用時間（秒）
   sessionCount: number;          // セッション数
 };
+
+export type NativeWebAppEvent =
+  | {
+      type: "URL_CHANGE";
+      url: string;
+      timestamp: number;
+    }
+  | {
+      type: "TRACKING_STOP";
+      timestamp: number;
+    };

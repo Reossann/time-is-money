@@ -7,8 +7,8 @@
 - 解決したい課題: 何にどれだけ時間を使ったかを感覚ではなく数値で把握しにくいこと。
 - 想定ユーザー: Windows PC で仕事や学習をしている個人ユーザー。
 - 将来的な完成イメージ: 前面アプリやサイトの利用時間を自動で集計し、金額・カテゴリ・通知・履歴で確認できるデスクトップアプリ。
-- 現在実装済みの範囲: 4画面とナビゲーション、アプリ起動からの経過時間表示、自動起動設定、テスト通知、起動1分後の仮通知、システムトレイ、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・解決、Tauri Command、型・値検証付きフロントサービス。
-- 現在未実装の範囲: 前面ウィンドウの継続監視、アプリ別利用時間の計測、ウィンドウ切り替え検知、SQLiteへの保存、分類ルールの作成・適用、活動履歴表示、実際の利用条件に基づく通知、集計、グラフ、ブラウザ拡張機能、外部通信。
+- 現在実装済みの範囲: 4画面とナビゲーション、アプリ起動からの経過時間表示、自動起動設定、テスト通知、システムトレイ、前面Windowsアプリの継続監視とsession単位の利用時間snapshot、Chrome拡張機能とNative Messaging Hostによるサイト（ドメイン）別利用時間計測、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・解決、Tauri Command、型・値検証付きフロントサービス。
+- 現在未実装の範囲: 利用時間からの活動レコード作成・SQLite保存・分類・金額結果UI・履歴表示、実際の利用条件に基づく通知、集計、グラフ、idle/lock検出、外部通信。
 
 ## 2. 使用技術
 
@@ -128,7 +128,7 @@
 - このアプリでの担当: ウィンドウを閉じたときの非表示化、左クリックでの再表示、メニューからの再表示・終了。
 - 採用理由: 監視系アプリの操作性を損なわずに常駐しやすい。
 - 現時点の導入状況: 導入済み。アプリアイコン、開く・終了メニュー、左クリックによる再表示を実装済み。
-- 導入する予定の段階: 基本実装は完了。継続監視処理はまだ接続していない。
+- 導入状況: 基本実装と継続監視処理は完了。Rust側のトラッカーはウィンドウの表示状態と独立して動作する。
 
 ### Windows API
 
@@ -148,17 +148,26 @@
 - 現時点の導入状況: 必要なWin32 featureに限定したWindowsターゲット依存として導入済み。
 - 導入する予定の段階: 前面ウィンドウの単発取得へ導入済み。追加APIは用途が決まった段階で検討する。
 
+### Chrome Native Messaging
+
+- 何か: Chrome拡張機能とローカルのネイティブ実行ファイルをstdin/stdoutで接続する仕組み。
+- このアプリでの担当: アクティブなHTTP/HTTPS URLをサニタイズしてNative Messaging Hostへ渡し、localhostブリッジ経由でTauriへ通知する。
+- 現時点の導入状況: 開発用拡張機能IDの固定、Host登録、URL変更・計測停止、接続失敗表示、タイマー画面への現在セッション反映まで実装済み。
+- プライバシー境界: query、hash、URL内の認証情報を拡張機能とHostの両側で除去する。クラウド送信は行わない。
+
 ## 3. アーキテクチャ
 
 - React・TypeScript 側が担当する処理: 画面表示、ナビゲーション、アプリ起動からの経過時間状態、自動起動設定、時給設定の検証・解決・repository、サービス層を通したCommand呼び出しと実行時検証。
-- Rust 側が担当する処理: Tauriウィンドウ制御、Windows APIによる前面ウィンドウ情報の単発取得、Tauri Command、Store Plugin初期化、システムトレイ、起動5秒後の仮通知。
-- Tauri Command の呼び出し構造: `getActiveWindowInfo()` が `@tauri-apps/api` の `invoke("get_active_window_info")` を呼び、戻り値をZodで検証する。タイマー画面からはまだ呼び出していない。
+- Rust 側が担当する処理: Tauriウィンドウ制御、Windows APIから前面process名だけを取得する常駐worker、利用時間accumulator、Tauri Command、Store Plugin初期化、システムトレイ、起動5秒後の仮通知。
+- Tauri Command の呼び出し構造: 単発取得の`getActiveWindowInfo()`に加え、`start_app_usage_tracking`、`get_app_usage_tracking_snapshot`、`stop_app_usage_tracking`を`appUsageTrackingService.ts`がinvokeし、wire/public snapshotをZodで検証する。
 - 将来的な SQLite 保存の流れ: UI で設定や分類結果を更新し、Rust 側のサービスが SQLite へ保存する予定。
 - 前面ウィンドウ取得の流れ: Rust側のplatformモジュールがWindows APIから情報を取得し、登録済みCommand経由でフロントサービスへ返す。
-- 現在のタイマー表示の流れ: `App.tsx` が起動時刻をZustandへ保存し、1秒ごとに実経過時間を同期してタイマー画面へ表示する。この値はアプリ別の利用時間ではない。
+- 現在のタイマー表示の流れ: `useMeasurementTracking`がZustandの`sessionId / startedAt`をRust trackerへ一度だけ渡し、1秒ごとに総経過時間を同期する。開発時だけTimerPageのdiagnosticsが表示用snapshotを更新し、計測そのものは画面遷移・トレイ非表示と独立して継続する。
 - 現在の時給設定の流れ: 設定画面のUIがrepositoryからversion 1設定を読み、Zod検証後の値だけを表示する。保存時は純粋serviceで新しい設定を作り、repositoryが`settings.json`の`hourly-rate-settings-v1`へ書き込む。
 - 時給解決と金額計算の流れ: consumerはraw process名を`resolveHourlyRateYen()`へ渡し、返された0以上の有限数を`calculateMoneyBreakdown()`へ渡す。時給serviceは#13の金額式や丸めを持たない。
-- 将来的な活動計測の流れ: 前面ウィンドウを継続監視し、切り替わりで活動時間を区切って活動レコードとして保存する予定。
+- 現在の利用時間計測の流れ: Rust workerが1秒samplingで前面process名を観測し、millisecondsで排他的に集計する。5秒超gap、self、null、取得失敗はuntrackedにする。stop時は最初の`endedAt`でfinal snapshotを固定し、後続consumerは同じ境界でretryできる。
+- 将来的な活動計測の流れ: 固定snapshotを活動レコードへ変換し、SQLiteへ保存する予定。
+- Chromeサイト計測の流れ: 拡張機能が前面タブのHTTP/HTTPS URLからドメインだけを取り出し、成功ACKを受けた値だけを送信済みとして保持する。Native Messaging HostがTauriへ転送し、フロントはZod検証後にドメイン単位のZustandセッションを開始・終了する。URLのpath、query、hash、ページタイトルは保存・表示しない。
 - 将来的な分類ルール適用の流れ: `AppRule` に基づいて process/title/domain を分類し、カテゴリを決定する予定。
 - 現在の通知処理: Rust側の通知サービスが起動5秒後にスパルタ口調の仮通知をランダム送信する。将来は実際の活動時間と設定値を使う条件へ置き換える。
 
@@ -176,7 +185,17 @@ flowchart LR
   CMD --> RUST[Rust Services / Models]
   RUST --> OS[Windows API / Tray / Notification]
   RUST --> DB[(SQLite)]
+  EXT[Chrome Extension] --> HOST[Native Messaging Host]
+  HOST --> RUST
 ```
+
+### アプリ別利用時間の契約
+
+- `sessionId`、`startedAt`、`endedAt`はtimerとtrackerで共有する。内部単位はmilliseconds、公開単位はcompleted secondsである。
+- public snapshotは`apps / trackedDurationSeconds / untrackedDurationSeconds / durationSeconds`のみを返し、`tracked + untracked = total`を検証する。
+- process名は#52と同じtrim・NFC・lowercaseでcanonical app IDへ統合してから秒へ丸める。case/NFC差は一appへmergeする。
+- window title、URL、PID、full pathはwire、state、DOM、error、ログ、保存payloadへ渡さない。raw Windows/Tokio errorも公開しない。
+- browserは`chrome.exe`等のdesktop processとして一件だけ計測する。同時にChrome拡張がドメイン別の別表示を作るが、desktop snapshotへ加算しないため二重計上しない。idle/lock判定、結果UI、金額換算、永続化は対象外である。
 
 ## 4. ファイル構成
 
@@ -185,7 +204,7 @@ flowchart LR
 - 何か: React フロントエンドの本体。
 - 何のために存在するか: 画面表示、状態管理、将来の設定やデータ取得の分離。
 - 将来的にどの処理を担当するか: UI、ユーザー操作、Command 呼び出しの起点。
-- 現時点でどこまで実装されているか: 4画面の切り替え、起動経過タイマー、自動起動設定、時給設定、開発用仮通知を実装済み。カレンダーとグラフはプレースホルダー。
+- 現時点でどこまで実装されているか: 4画面の切り替え、起動経過タイマー、前面Windowsアプリ別の利用時間計測、開発限定diagnostics、自動起動設定、時給設定、開発用仮通知を実装済み。カレンダーとグラフはプレースホルダー。
 - どのファイルから呼ばれる予定か: `index.html` から `src/main.tsx` を経由して起動される。
 - 今後どのような機能を追加する場所か: グラフ、入力フォーム、履歴、設定 UI。
 
@@ -203,7 +222,7 @@ flowchart LR
 - 何か: 画面単位の React コンポーネントを置く場所。
 - 何のために存在するか: タイマー / カレンダー / グラフ / 設定を独立させるため。
 - 将来的にどの処理を担当するか: 各画面のデータ表示、入力、状態表示。
-- 現時点でどこまで実装されているか: タイマーは起動経過時間を表示し、設定は自動起動、デフォルト時給、前面Windowsアプリの登録、アプリ別上書き時給を操作できる。カレンダーとグラフはページ名と説明のみ。
+- 現時点でどこまで実装されているか: タイマーは起動経過時間、development限定のWindowsアプリ別利用時間diagnostics、Chrome拡張機能の接続状態、現在のサイト、ドメイン別利用時間を表示する。設定は自動起動、デフォルト時給、前面Windowsアプリの登録、アプリ別上書き時給を操作できる。カレンダーとグラフはページ名と説明のみ。
 - どのファイルから呼ばれる予定か: `src/App.tsx` から呼ばれる。
 - 今後どのような機能を追加する場所か: 集計グラフ、一覧、編集フォーム。
 
@@ -220,9 +239,9 @@ flowchart LR
 
 - 何か: アプリ起動からの経過時間を管理するZustandストア。
 - 何のために存在するか: `setInterval`の呼び出し回数ではなく、開始時刻との差分から実経過時間を表示するため。
-- 将来的にどの処理を担当するか: 現在は起動経過時間のみ。アプリ別活動計測とは分離したまま、必要に応じて表示状態を拡張する。
-- 現時点でどこまで実装されているか: 開始時刻の記録、1秒単位の同期、負の経過時間を0へ補正する処理を実装済み。
-- どのファイルから呼ばれるか: `src/App.tsx`が開始・同期し、`src/pages/TimerPage.tsx`が表示する。
+- 将来的にどの処理を担当するか: 総経過時間とtimer session identityを持つ。アプリ別のraw計測値はRust trackerに分離したまま、必要に応じて結果表示へ渡す。
+- 現時点でどこまで実装されているか: 開始時刻とsession IDの記録、1秒単位の同期、負の経過時間を0へ補正、最初の停止境界の固定を実装済み。
+- どのファイルから呼ばれるか: `useMeasurementTracking`が開始・同期し、`src/pages/TimerPage.tsx`が総経過時間を表示する。
 - 今後どのような機能を追加する場所か: アプリ全体の計測状態表示。前面アプリ別の履歴データは別の監視・保存層で管理する。
 
 ### `src/hooks/useNavigation.ts`
@@ -248,8 +267,8 @@ flowchart LR
 - 何か: UI と Tauri Command の間に置くサービス層。
 - 何のために存在するか: 画面から直接 Rust 実装を意識しないため。
 - 将来的にどの処理を担当するか: Command呼び出し、データ検証・整形、保存ロジック。
-- 現時点でどこまで実装されているか: `activityService.ts`の単発前面window取得、`hourlyRateSettingsService.ts`のprocess名正規化・登録・変更・解除・fallback解決、`moneyCalculationService.ts`の分類別金額換算を実装済み。
-- どのファイルから呼ばれるか: 設定画面が前面window取得と時給設定serviceを利用し、結合testが時給resolverの結果を金額計算serviceへ渡す。継続監視hookからの呼び出しは未実装。
+- 現時点でどこまで実装されているか: `activityService.ts`の単発前面window取得、`appUsageTrackingService.ts`のstart/preview/stop・Zod検証・canonical app統合、`hourlyRateSettingsService.ts`のprocess名正規化・登録・変更・解除・fallback解決、`moneyCalculationService.ts`の分類別金額換算を実装済み。
+- どのファイルから呼ばれるか: 設定画面が前面window取得と時給設定serviceを利用し、`useMeasurementTracking`がapp usage serviceを利用する。結合testが時給resolverの結果を金額計算serviceへ渡す。
 - 今後どのような機能を追加する場所か: activity / settings / tauri の処理拡張。
 
 ### `src/repositories/`
@@ -279,7 +298,7 @@ flowchart LR
 - 何か: Zod スキーマを置く場所。
 - 何のために存在するか: 型と実行時検証の雛形をそろえるため。
 - 将来的にどの処理を担当するか: 設定値や Command 入力の検証。
-- 現時点でどこまで実装されているか: `activeWindowInfoSchema`に加え、`hourlyRateSettingsSchemas.ts`が時給のfinite/nonnegative条件、schema version、process名、appId一致、重複、strictな保存shapeを検証する。
+- 現時点でどこまで実装されているか: `activeWindowInfoSchema`に加え、`appUsageTrackingSchemas.ts`がcamelCase wire、schema version、safe integer、合計不変条件、公開snapshotの順序・重複・privacy fieldを検証する。`hourlyRateSettingsSchemas.ts`は時給のfinite/nonnegative条件、schema version、process名、appId一致、重複、strictな保存shapeを検証する。
 - どのファイルから呼ばれる予定か: `activityService.ts` から利用済み。将来的にフォームや保存処理からも呼ばれる。
 - 今後どのような機能を追加する場所か: 入力検証と保存前チェック。
 
@@ -288,16 +307,16 @@ flowchart LR
 - 何か: Rust 側の Tauri バックエンド。
 - 何のために存在するか: OS 依存処理と将来の Command をまとめるため。
 - 将来的にどの処理を担当するか: 前面ウィンドウ取得、保存、通知、常駐、起動処理。
-- 現時点でどこまで実装されているか: 前面ウィンドウ取得のplatform処理とTauri Command、通知、自動起動、Store Plugin、システムトレイ、閉じる操作でのウィンドウ非表示化を実装済み。
+- 現時点でどこまで実装されているか: 前面process名の最小取得と常駐tracker、start/preview/stop Command、通知、自動起動、Store Plugin、システムトレイ、閉じる操作でのウィンドウ非表示化を実装済み。
 - どのファイルから呼ばれる予定か: Tauri ランタイムから起動される。
-- 今後どのような機能を追加する場所か: 継続監視、Command拡張、SQLite、利用条件に基づく通知。
+- 今後どのような機能を追加する場所か: Command拡張、SQLite、利用条件に基づく通知、idle/lock観測。
 
 ### `src-tauri/src/models/`
 
 - 何か: Rust の共有データモデル。
 - 何のために存在するか: TS 型と意味を合わせるため。
 - 将来的にどの処理を担当するか: Command 戻り値、保存データ、変換処理。
-- 現時点でどこまで実装されているか: Activity / Settings 系の構造体のみ。
+- 現時点でどこまで実装されているか: Activity / Settings系に加え、version付きcamelCaseのAppUsageSnapshot wireとraw process durationを定義している。
 - どのファイルから呼ばれる予定か: `commands` と `services` から参照される。
 - 今後どのような機能を追加する場所か: 履歴やルールの Rust 側モデル追加。
 
@@ -306,7 +325,7 @@ flowchart LR
 - 何か: Tauri Command を置く層。
 - 何のために存在するか: Rust 側の関数をフロントから呼びやすくするため。
 - 将来的にどの処理を担当するか: 設定取得、履歴保存、状態読み出しなど。
-- 現時点でどこまで実装されているか: `activity.rs` の `get_active_window_info` がplatform層の結果を安全なCommand結果へ変換する。
+- 現時点でどこまで実装されているか: `activity.rs`が単発`get_active_window_info`と、安定error codeだけを返すapp usageのstart/preview/stop Commandを公開する。
 - どのファイルから呼ばれる予定か: `lib.rs` のinvoke handlerへ登録済みで、フロントサービスから呼ばれる。
 - 今後どのような機能を追加する場所か: Activity / Settings / Tray / Window 系 Command。
 
@@ -333,6 +352,7 @@ flowchart LR
 - TypeScript の型: `ActivityRecord`, `AppRule`, `AppSettings`, `ActiveWindowInfo`, `ActivityCategory`, `MoneyCalculationInput`, `MoneyBreakdown`, `HourlyRateSettings`, `DesktopAppHourlyRateSetting`。
 - Rust の構造体: `ActivityRecord`, `AppRule`, `AppSettings`, `ActiveWindowInfo`, `ActivityCategory`, `MatchType` を定義済み。
 - 時給設定のruntime正本: `HourlyRateSettings`のversion 1。`defaultHourlyRateYen`と`desktopApps`を持ち、各app entryは`appId / processName / hourlyRateYen`だけを保存する。
+- アプリ利用時間のruntime正本: memory上のversion 1 `AppUsageSnapshot`。`sessionId / startedAt / capturedAt / apps / trackedDurationSeconds / untrackedDurationSeconds / durationSeconds`を持つが、現時点ではStoreやSQLiteへ保存しない。
 - 初回値: keyがない場合は`schemaVersion: 1 / defaultHourlyRateYen: 0 / desktopApps: []`を返す。読み込みだけではStoreへ書き込まない。
 - app識別子: `trim(processName).normalize("NFC").toLowerCase()`で作る。表示用process名はtrim・NFC後のcaseを保持し、空文字、control文字、path separatorを拒否する。
 - 時給解決順: 登録appの`hourlyRateYen`がnumberならその値を使い、未登録または`null`ならdefaultへfallbackする。`0`は明示的な有効値なのでfallbackしない。
@@ -348,7 +368,7 @@ flowchart LR
 - 分類別の扱い: `productive` は `earnedYen`、`waste` は `wastedYen` に換算額を入れる。`neutral`、`null`、`undefined` はどちらも0円とする。未知の分類値はエラーにする。
 - 金額結果の不変条件: `earnedYen` と `wastedYen` は0以上の安全な整数、`netYen` は `earnedYen - wastedYen` とする。集計はレコード別の `MoneyBreakdown` を加算し、この条件を維持する。
 - 金額計算の失敗: 不正な秒数・時給・分類・内訳、および JavaScript の安全な整数範囲を超える結果は、値をログやメッセージへ露出させず `MoneyCalculationError` で通知する。
-- UI・保存との接続: 時給設定UIとStore永続化は実装済み。アプリ別利用時間と金額結果の画面表示・履歴保存は未接続で、後続consumerはresolverの値を金額計算serviceへ渡す。
+- UI・保存との接続: 時給設定UIとStore永続化は実装済み。アプリ別利用時間は開発限定diagnosticsへ表示するが、金額結果UI・履歴保存は未接続で、後続consumerはsnapshotとresolverの値を金額計算serviceへ渡す。
 - カテゴリの管理方法: `productive / waste / neutral` の列挙型で管理する案。
 - データベースが未実装であること: 活動履歴用SQLiteは未実装。小規模設定の永続化にはTauri Store Pluginを使用しており、役割を混同しない。
 
@@ -397,23 +417,23 @@ npm run tauri dev
 
 ## 9. 実装状況
 
-- 現在の主要構成: React画面、Zustandストア、Zodスキーマ、TypeScriptサービス・repository、Tauri Store Plugin、Rustモデル・platform・Command、Tauri通知・自動起動・システムトレイ設定。
-- 現在動作する機能: 4画面の切り替え、アプリ起動からの経過時間表示、自動起動の切り替え、テスト通知、起動1分後の仮通知、トレイ常駐と再表示・終了、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・変更・解除・再起動復元、分類済みレコードの金額換算と集計を行うTypeScript純粋関数。
-- プレースホルダーとして存在するファイル: `src/services/settingsService.ts`, `src/services/tauriService.ts`, `src-tauri/src/commands/settings.rs`, `src-tauri/src/services/*`。
-- 未実装の機能: 前面ウィンドウの継続監視、切り替え検知、アプリ別時間計測、活動履歴のSQLite保存、分類、履歴表示、金額結果のUI表示・保存への接続、ブラウザ拡張機能、クラウド通信。
+- 現在の主要構成: React画面、Zustandストア、Zodスキーマ、TypeScriptサービス・repository、Chrome拡張機能、Native Messaging Host、Tauri Store Plugin、Rustモデル・platform・Command、Tauri通知・自動起動・システムトレイ設定。
+- 現在動作する機能: 4画面の切り替え、アプリ起動からの経過時間表示、前面Windowsアプリ別の利用時間snapshot、Chromeのドメイン別利用時間表示、自動起動の切り替え、テスト通知、トレイ常駐と再表示・終了、前面ウィンドウ情報の単発取得、デフォルト時給とWindowsアプリ別時給の登録・保存・変更・解除・再起動復元、分類済みレコードの金額換算と集計を行うTypeScript純粋関数。
+- プレースホルダーとして存在するファイル: `src/services/settingsService.ts`, `src/services/tauriService.ts`, `src-tauri/src/commands/settings.rs`。
+- 未実装の機能: snapshotからの活動レコード作成・SQLite保存、分類、履歴表示、金額結果のUI表示・保存への接続、idle/lock検出、クラウド通信。
 - 将来実装する機能: 活動レコード作成、ルール適用、SQLite保存、実際の利用条件に基づく通知、日次・週次・月次集計。
-- Windows 限定の処理: 前面ウィンドウの単発取得。アイドル検知などは将来の対象。
+- Windows 限定の処理: 前面windowのprocess名取得と継続監視。アイドル検知などは将来の対象。
 - 現時点で導入していないライブラリやプラグイン: Tauri SQL Plugin。
 
 ## 10. セキュリティとプライバシー
 
-- 単発取得できる情報: 前面ウィンドウのプロセス名、ウィンドウタイトル、PID。時給設定への登録では直ちにprocess名だけへ絞り、window titleとPIDは保存しない。アプリ別利用時間や分類結果の継続収集・保存は未実装。
+- 単発取得できる情報: 前面ウィンドウのプロセス名、ウィンドウタイトル、PID。時給設定への登録では直ちにprocess名だけへ絞り、window titleとPIDは保存しない。継続trackerはprocess名だけを使い、アプリ別利用時間snapshotをmemory上で保持する。
 - 収集しない予定の情報: 外部アカウント情報、外部サーバー上の閲覧データ、クラウド認証情報。
 - データは端末内に保存する方針: 基本的にローカル保存を前提とする。
 - 外部サーバーへ送信しない方針: 現時点では送信処理を実装していない。
 - ウィンドウタイトルに個人情報が含まれる可能性: あるため、表示・保存・ログの扱いに注意する。
 - 時給設定の保存payload: `schemaVersion / defaultHourlyRateYen / desktopApps`と、各appの`appId / processName / hourlyRateYen`だけを許可する。window title、PID、full path、URLはschemaにも保存値にも含めない。
-- ログとerrorの取り扱い: 前面ウィンドウのタイトル、process名、実行ファイルのフルパス、raw Store payloadをrepository errorへ含めない。UIには固定の安全なメッセージを出す。
+- ログとerrorの取り扱い: app usageのsnapshot、error、diagnostics、URL受信Command戻り値へ、前面ウィンドウのタイトル、URL、PID、実行ファイルのフルパス、raw Windows/Tokio errorを含めない。repository errorもraw Store payloadを含めず、UIには固定の安全なメッセージを出す。
 - Tauri のCapability設定: Storeは`load / get / set / reload / save`だけを許可し、`delete / clear / reset`は許可しない。`reload`はsave失敗後のdisk復元専用。
 - 壊れた保存値: unknown schema version、field欠落、不正rate、appId重複・不一致をapplicationへ渡さず、自動初期化・上書きもしない。
-- 現時点で監視や収集を行っていないこと: 単発取得と利用者操作によるprocess名登録は実装済みだが、アプリ起動時の自動呼び出しや継続監視は未実装。
+- 継続計測の制限: app開始時からの1秒samplingであり、切替瞬間の完全一致は保証しない。5秒超gap、self、null、取得失敗はuntrackedとする。browser URL、idle、lock/unlock、永続化、外部送信は実装していない。

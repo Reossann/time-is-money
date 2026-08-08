@@ -1,5 +1,7 @@
 pub mod commands;
 pub mod models;
+pub mod native_bridge;
+pub mod native_messaging;
 pub mod platform;
 pub mod services;
 
@@ -13,8 +15,11 @@ use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_store::StoreExt;
 
 use models::settings::AppSettings;
-use services::notification_service::{
-    notification_delay_from_interval, pick_random_message, NotificationTone,
+use services::{
+    app_usage_tracker::AppUsageTracker,
+    notification_service::{
+        notification_delay_from_interval, pick_random_message, NotificationTone,
+    },
 };
 
 const APP_ICON: Image<'_> = tauri::include_image!("icons/icon.png");
@@ -35,11 +40,10 @@ fn receive_web_app_url(url: String) -> Result<String, String> {
     match url::Url::parse(&url) {
         Ok(_) => {
             // ここで後に JavaScript側に通知するイベントを発火させる
-            // 現在は受け取ったURLをログに出力
-            println!("ウェブアプリURL受信: {}", url);
-            Ok(format!("URLを受け取りました: {}", url))
+            // URL本体はログやCommand戻り値へ出さない。
+            Ok("URLを受け取りました".to_string())
         }
-        Err(e) => Err(format!("URLの解析に失敗しました: {}", e)),
+        Err(_) => Err("URLの解析に失敗しました".to_string()),
     }
 }
 
@@ -99,9 +103,18 @@ fn load_notification_settings(app_handle: &AppHandle) -> AppSettings {
 }
 
 pub fn run() {
+    let app_usage_tracker = AppUsageTracker::for_current_process()
+        .expect("前面アプリ利用時間trackerを初期化できませんでした");
+
     tauri::Builder::default()
+        .manage(app_usage_tracker)
+        .manage(native_bridge::NativeBridgeState::default())
         .invoke_handler(tauri::generate_handler![
             commands::activity::get_active_window_info,
+            commands::activity::start_app_usage_tracking,
+            commands::activity::get_app_usage_tracking_snapshot,
+            commands::activity::stop_app_usage_tracking,
+            native_bridge::get_latest_native_web_app_event,
             receive_web_app_url
         ])
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -116,6 +129,9 @@ pub fn run() {
                     None,
                 ))?;
             }
+
+            services::native_bridge_service::start_native_bridge_listener(app.handle().clone());
+            services::native_messaging_setup_service::ensure_native_messaging_host_registered();
 
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
@@ -206,8 +222,34 @@ pub fn run() {
                     }
                 }
             });
+
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("Tauri アプリの起動に失敗しました");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::receive_web_app_url;
+
+    #[test]
+    fn receive_web_app_url_does_not_echo_the_full_url() {
+        let url = "https://example.com/private-path?token=secret";
+        let result = receive_web_app_url(url.to_owned()).unwrap();
+
+        assert_eq!(result, "URLを受け取りました");
+        assert!(!result.contains("example.com"));
+        assert!(!result.contains("private-path"));
+    }
+
+    #[test]
+    fn receive_web_app_url_hides_invalid_url_details() {
+        let raw_url = "not a valid URL with private-token";
+
+        let error = receive_web_app_url(raw_url.to_string()).expect_err("invalid URL must fail");
+
+        assert_eq!(error, "URLの解析に失敗しました");
+        assert!(!error.contains("private-token"));
+    }
 }

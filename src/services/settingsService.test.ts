@@ -46,6 +46,28 @@ describe("settingsService", () => {
 
   it("normalizes legacy short intervals to 30 minutes", async () => {
     const store = {
+      get: vi.fn().mockResolvedValue({
+        ...createDefaultSettings(),
+        notificationIntervalMinutes: 1,
+      }),
+      set: vi.fn().mockResolvedValue(undefined),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mocks.getSettingsStore.mockResolvedValue(store);
+
+    await expect(loadSettings()).resolves.toEqual({
+      ...createDefaultSettings(),
+      notificationIntervalMinutes: 30,
+    });
+  });
+
+  it("keeps the selected 15 minute interval when saving", async () => {
+    const settings = {
+      ...createDefaultSettings(),
+      notificationIntervalMinutes: 15 as const,
+    };
+    const store = {
       get: vi.fn().mockResolvedValue(undefined),
       set: vi.fn().mockResolvedValue(undefined),
       save: vi.fn().mockResolvedValue(undefined),
@@ -53,10 +75,8 @@ describe("settingsService", () => {
 
     mocks.getSettingsStore.mockResolvedValue(store);
 
-    await expect(saveSettings({ ...createDefaultSettings(), notificationIntervalMinutes: 15 })).resolves.toEqual({
-      ...createDefaultSettings(),
-      notificationIntervalMinutes: 30,
-    });
+    await expect(saveSettings(settings)).resolves.toEqual(settings);
+    expect(store.set).toHaveBeenCalledWith("app-settings", settings);
   });
 
   it("saves valid settings and returns them", async () => {

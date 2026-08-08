@@ -148,6 +148,73 @@ button {
   line-height: 1.8;
 }
 
+.timer-section,
+.current-webapp-section,
+.web-apps-section {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 12px 34px rgba(21, 30, 49, 0.06);
+}
+
+.timer-display {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.current-webapp-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(31, 111, 235, 0.12), rgba(31, 111, 235, 0.05));
+  border: 1px solid rgba(31, 111, 235, 0.18);
+}
+
+.current-webapp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.webapp-list {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+}
+
+.webapp-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(23, 32, 51, 0.08);
+}
+
+.webapp-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.webapp-duration {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.webapp-session-count {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 .hourly-rate-settings {
   display: grid;
   gap: 16px;
@@ -422,6 +489,84 @@ button {
   font-weight: 700;
 }
 
+.app-usage-diagnostics {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px dashed rgba(24, 128, 56, 0.4);
+  border-radius: 18px;
+  background: rgba(24, 128, 56, 0.08);
+}
+
+.app-usage-diagnostics h3,
+.app-usage-diagnostics dl,
+.app-usage-diagnostics dd {
+  margin: 0;
+}
+
+.app-usage-diagnostics__label {
+  color: #187a36 !important;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.app-usage-diagnostics__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.app-usage-diagnostics__summary div,
+.app-usage-diagnostics__apps li {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.app-usage-diagnostics__summary dt {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.app-usage-diagnostics__summary dd,
+.app-usage-diagnostics__apps strong {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.app-usage-diagnostics__apps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-usage-diagnostics__apps li {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.app-usage-diagnostics__error {
+  justify-self: start;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(180, 35, 24, 0.08);
+  color: #b42318 !important;
+  font-weight: 700;
+}
+
+.app-usage-diagnostics__note {
+  font-size: 0.9rem;
+}
+
 .result-flow {
   min-height: 100vh;
   display: grid;
@@ -659,6 +804,10 @@ button {
 
   .result-progress__list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-usage-diagnostics__summary {
+    grid-template-columns: 1fr;
   }
 
   .result-step {
