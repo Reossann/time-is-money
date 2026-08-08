@@ -12,10 +12,14 @@ use tauri::{
     AppHandle, Manager, WindowEvent,
 };
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_store::StoreExt;
 
+use models::settings::AppSettings;
 use services::{
     app_usage_tracker::AppUsageTracker,
-    notification_service::{pick_random_message, DEFAULT_TONE},
+    notification_service::{
+        notification_delay_from_interval, pick_random_message, NotificationTone,
+    },
 };
 
 const APP_ICON: Image<'_> = tauri::include_image!("icons/icon.png");
@@ -56,6 +60,45 @@ fn show_main_window(app: &AppHandle) {
         }
     } else {
         eprintln!("メインウィンドウが見つかりませんでした");
+    }
+}
+
+fn load_notification_settings(app_handle: &AppHandle) -> AppSettings {
+    let store = match app_handle.store("settings.json") {
+        Ok(store) => store,
+        Err(error) => {
+            eprintln!("設定ストアの読み込みに失敗しました: {error}");
+            return AppSettings {
+                hourly_rate: 3000.0,
+                notification_threshold_minutes: 30,
+                idle_threshold_minutes: 5,
+                notifications_enabled: true,
+                notification_tone: None,
+                notification_interval_minutes: Some(30),
+            };
+        }
+    };
+
+    match store.get("app-settings") {
+        Some(value) => serde_json::from_value::<AppSettings>(value).unwrap_or_else(|error| {
+            eprintln!("設定の解析に失敗しました: {error}");
+            AppSettings {
+                hourly_rate: 3000.0,
+                notification_threshold_minutes: 30,
+                idle_threshold_minutes: 5,
+                notifications_enabled: true,
+                notification_tone: None,
+                notification_interval_minutes: Some(30),
+            }
+        }),
+        None => AppSettings {
+            hourly_rate: 3000.0,
+            notification_threshold_minutes: 30,
+            idle_threshold_minutes: 5,
+            notifications_enabled: true,
+            notification_tone: None,
+            notification_interval_minutes: Some(30),
+        },
     }
 }
 
@@ -137,19 +180,46 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                // TODO: 活動計測が実装されたら、固定タイマーではなく実際の通知条件に接続する。（動作確認用に5秒に変更）
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                println!("通知ループ開始");
+                loop {
+                    let settings = load_notification_settings(&app_handle);
+                    println!(
+                        "通知設定: enabled={}, interval={:?}, tone={:?}",
+                        settings.notifications_enabled,
+                        settings.notification_interval_minutes,
+                        settings.notification_tone
+                    );
 
-                let body = pick_random_message(DEFAULT_TONE);
+                    if !settings.notifications_enabled {
+                        println!("通知が無効のため待機します");
+                        tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                        continue;
+                    }
 
-                if let Err(error) = app_handle
-                    .notification()
-                    .builder()
-                    .title("Time Is Money")
-                    .body(body)
-                    .show()
-                {
-                    eprintln!("通知送信に失敗しました: {error}");
+                    let interval = settings.notification_interval_minutes.unwrap_or(30);
+                    let tone = NotificationTone::from_setting_value(
+                        settings.notification_tone.as_deref().unwrap_or("sparta"),
+                    );
+                    let delay = notification_delay_from_interval(interval);
+
+                    println!("通知待機開始: {}秒", delay.as_secs());
+                    tokio::time::sleep(delay).await;
+
+                    let body = pick_random_message(tone);
+                    println!("通知送信試行: {}", body);
+
+                    if let Err(error) = app_handle
+                        .notification()
+                        .builder()
+                        .title("Time Is Money")
+                        .body(body)
+                        .show()
+                    {
+                        eprintln!("通知送信に失敗しました: {error}");
+                        println!("フォールバック表示: {}", body);
+                    } else {
+                        println!("通知送信成功");
+                    }
                 }
             });
 
