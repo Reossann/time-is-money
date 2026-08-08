@@ -215,10 +215,24 @@ pub fn run_host() -> io::Result<()> {
 }
 
 pub fn run_host_with_io<R: Read, W: Write, E: Write>(
+    reader: R,
+    writer: W,
+    error_writer: E,
+) -> io::Result<()> {
+    run_host_with_io_and_forward(reader, writer, error_writer, |event| {
+        forward_native_web_app_event(event).map(|_| ())
+    })
+}
+
+fn run_host_with_io_and_forward<R: Read, W: Write, E: Write, F>(
     mut reader: R,
     mut writer: W,
     mut error_writer: E,
-) -> io::Result<()> {
+    forward: F,
+) -> io::Result<()>
+where
+    F: FnOnce(&NativeWebAppEvent) -> io::Result<()>,
+{
     let payload = match read_frame(&mut reader) {
         Ok(Some(payload)) => payload,
         Ok(None) => return Ok(()),
@@ -287,7 +301,7 @@ pub fn run_host_with_io<R: Read, W: Write, E: Write>(
             return Ok(());
         };
 
-        if let Err(error) = forward_native_web_app_event(&bridge_event) {
+        if let Err(error) = forward(&bridge_event) {
             let response = NativeMessagingResponse::error(
                 "APP_UNAVAILABLE",
                 format!("Tauri app bridge unavailable: {error}"),
@@ -452,7 +466,10 @@ mod tests {
         let mut output = Vec::new();
         let mut logs = Vec::new();
 
-        run_host_with_io(Cursor::new(input), &mut output, &mut logs).unwrap();
+        run_host_with_io_and_forward(Cursor::new(input), &mut output, &mut logs, |_| {
+            Err(io::Error::other("bridge is unavailable"))
+        })
+        .unwrap();
 
         let response_length = u32::from_le_bytes(output[0..4].try_into().unwrap()) as usize;
         let response = serde_json::from_slice::<Value>(&output[4..4 + response_length]).unwrap();

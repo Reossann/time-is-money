@@ -104,5 +104,8 @@ describe("TimerPage", () => {
         name: "Windowsアプリ利用時間の開発診断",
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "セッション結果の開発用確認" }),
+    ).toBeInTheDocument();
   });
 });

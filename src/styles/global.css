@@ -572,6 +572,94 @@ button {
   font-size: 0.9rem;
 }
 
+.session-finalization-diagnostics {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.session-finalization-diagnostics h3,
+.session-finalization-diagnostics dl,
+.session-finalization-diagnostics dd {
+  margin: 0;
+}
+
+.session-finalization-diagnostics__label {
+  margin: 0 0 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.session-finalization-diagnostics__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 8px;
+  margin-top: 12px !important;
+}
+
+.session-finalization-diagnostics__summary div,
+.session-finalization-diagnostics__apps li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.session-finalization-diagnostics__summary dt {
+  color: #475569;
+}
+
+.session-finalization-diagnostics__apps {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-finalization-diagnostics__apps li {
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.session-finalization-diagnostics__error {
+  color: #b91c1c;
+}
+
+.session-finalization-diagnostics__note {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.app-category-settings {
+  margin-top: 24px;
+}
+
+.app-category-settings form,
+.app-category-settings__list li {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-category-settings label {
+  display: grid;
+  gap: 4px;
+}
+
+.app-category-settings__list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 .result-flow {
   min-height: 100vh;
   display: grid;

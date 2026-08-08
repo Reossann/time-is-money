@@ -10,6 +10,8 @@ import {
 import type {
   MeasurementStatus,
   RunningMeasurement,
+  SessionFinalizationErrorCode,
+  SessionResult,
   StoppedMeasurement,
 } from "../types/sessionResult";
 
@@ -19,12 +21,17 @@ type ActivityState = {
   sessionId: string | null;
   measurementStatus: MeasurementStatus;
   stoppedMeasurement: StoppedMeasurement | null;
+  finalizedResult: SessionResult | null;
+  finalizationErrorCode: SessionFinalizationErrorCode | null;
   startMeasurement: (
     now?: number,
     generateId?: SessionIdGenerator,
   ) => RunningMeasurement;
   syncElapsed: (now?: number) => void;
   stopMeasurement: (now?: number) => StoppedMeasurement;
+  markFinalizing: () => void;
+  markFinalized: (result: SessionResult) => void;
+  markFinalizationFailed: (errorCode: SessionFinalizationErrorCode) => void;
 };
 
 export const useActivityStore = create<ActivityState>((set, get) => ({
@@ -33,6 +40,8 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   sessionId: null,
   measurementStatus: "idle",
   stoppedMeasurement: null,
+  finalizedResult: null,
+  finalizationErrorCode: null,
   startMeasurement: (now, generateId = generateSessionId) => {
     const state = get();
 
@@ -68,6 +77,8 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       sessionId: runningMeasurement.sessionId,
       measurementStatus: "running",
       stoppedMeasurement: null,
+      finalizedResult: null,
+      finalizationErrorCode: null,
     });
 
     return runningMeasurement;
@@ -111,8 +122,55 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       elapsedSeconds: stoppedMeasurement.durationSeconds,
       measurementStatus: "stopped",
       stoppedMeasurement,
+      finalizedResult: null,
+      finalizationErrorCode: null,
     });
 
     return stoppedMeasurement;
+  },
+  markFinalizing: () => {
+    const { stoppedMeasurement } = get();
+    if (stoppedMeasurement === null) {
+      throw new MeasurementLifecycleError(
+        "MEASUREMENT_NOT_RUNNING",
+        "cannot finalize before a measurement stops",
+      );
+    }
+
+    set({
+      measurementStatus: "finalizing",
+      finalizedResult: null,
+      finalizationErrorCode: null,
+    });
+  },
+  markFinalized: (result) => {
+    const { stoppedMeasurement } = get();
+    if (stoppedMeasurement === null) {
+      throw new MeasurementLifecycleError(
+        "MEASUREMENT_NOT_RUNNING",
+        "cannot finalize before a measurement stops",
+      );
+    }
+
+    set({
+      measurementStatus: "finalized",
+      finalizedResult: result,
+      finalizationErrorCode: null,
+    });
+  },
+  markFinalizationFailed: (errorCode) => {
+    const { stoppedMeasurement } = get();
+    if (stoppedMeasurement === null) {
+      throw new MeasurementLifecycleError(
+        "MEASUREMENT_NOT_RUNNING",
+        "cannot fail finalization before a measurement stops",
+      );
+    }
+
+    set({
+      measurementStatus: "failed",
+      finalizedResult: null,
+      finalizationErrorCode: errorCode,
+    });
   },
 }));
