@@ -35,7 +35,7 @@ describe("TimerPage", () => {
     );
   });
 
-  it("shows the active web app and live duration", () => {
+  it("shows the live duration in site usage statistics", () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_005_000);
     useWebAppStore.setState({
       currentSession: {
@@ -59,9 +59,7 @@ describe("TimerPage", () => {
 
     render(<TimerPage />);
 
-    expect(screen.getAllByText("Google Docs")).toHaveLength(2);
-    expect(screen.getByText("セッション計測中")).toBeInTheDocument();
-    expect(screen.getByText("00:00:05")).toBeInTheDocument();
+    expect(screen.getAllByText("Google Docs")).toHaveLength(1);
     expect(screen.getByText("00:00:08")).toBeInTheDocument();
     expect(screen.getByText("接続済み")).toBeInTheDocument();
   });
@@ -89,13 +87,13 @@ describe("TimerPage", () => {
     });
 
     render(<TimerPage />);
-    expect(screen.getAllByText("00:00:00")).toHaveLength(3);
+    expect(screen.getAllByText("00:00:00")).toHaveLength(2);
 
     act(() => {
       vi.advanceTimersByTime(2_000);
     });
 
-    expect(screen.getAllByText("00:00:02")).toHaveLength(2);
+    expect(screen.getAllByText("00:00:02")).toHaveLength(1);
   });
 
   it("shows the Windows app diagnostics in development", () => {

@@ -188,16 +188,15 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return false;
   }
 
-  Promise.all([getPreviousActiveUrl(), getConnectionState()])
-    .then(([currentUrl, connectionState]) => {
-      sendResponse({ isMonitoring, currentUrl, connectionState });
+  getConnectionState()
+    .then((connectionState) => {
+      sendResponse({ isMonitoring, connectionState });
       retryActiveTabIfNeeded(connectionState);
     })
     .catch((error) => {
       console.error("監視状態の取得に失敗:", error);
       sendResponse({
         isMonitoring: false,
-        currentUrl: null,
         connectionState: nativeConnectionState.sendFailed,
       });
     });
