@@ -9,6 +9,11 @@ extensions/webtime-tracker/
 ├── manifest.json          # Chrome拡張機能の設定ファイル
 ├── README.md             # このファイル
 └── src/
+    ├── icons/            # Chrome拡張機能用アイコン
+    │   ├── icon-16.png
+    │   ├── icon-32.png
+    │   ├── icon-48.png
+    │   └── icon-128.png
     ├── background.js     # Service Worker（タブ監視、URL送信）
     ├── tracking-utils.js # URLの正規化、重複排除、アプリ判定
     ├── popup.html        # ポップアップUI
