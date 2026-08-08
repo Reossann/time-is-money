@@ -314,9 +314,7 @@ pub fn is_registered(_install_dir: &Path) -> bool {
 fn format_windows_path(path: &Path) -> String {
     let path = path.to_string_lossy().replace('/', "\\");
 
-    path.strip_prefix(r"\\?\")
-        .unwrap_or(&path)
-        .to_string()
+    path.strip_prefix(r"\\?\").unwrap_or(&path).to_string()
 }
 
 fn write_manifest(path: &Path, contents: &str) -> Result<(), NativeMessagingSetupError> {
