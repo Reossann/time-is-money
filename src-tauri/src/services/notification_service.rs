@@ -25,11 +25,25 @@ pub enum NotificationTone {
     Gentle,
 }
 
+impl NotificationTone {
+    pub fn from_setting_value(value: &str) -> Self {
+        match value {
+            "gentle" => Self::Gentle,
+            "sparta" => Self::Spartan,
+            _ => Self::Spartan,
+        }
+    }
+}
+
 pub const DEFAULT_TONE: NotificationTone = NotificationTone::Spartan;
 
 pub fn pick_random_message(tone: NotificationTone) -> &'static str {
     let mut rng = rand::rng();
     pick_random_message_with_rng(messages_for(tone), &mut rng)
+}
+
+pub fn notification_delay_from_interval(minutes: u32) -> std::time::Duration {
+    std::time::Duration::from_secs((minutes as u64) * 60)
 }
 
 fn messages_for(tone: NotificationTone) -> &'static [&'static str] {
@@ -74,5 +88,27 @@ mod tests {
     #[test]
     fn default_tone_is_spartan() {
         assert_eq!(DEFAULT_TONE, NotificationTone::Spartan);
+    }
+
+    #[test]
+    fn maps_setting_tone_values_to_notification_tone() {
+        assert_eq!(
+            NotificationTone::from_setting_value("gentle"),
+            NotificationTone::Gentle
+        );
+        assert_eq!(
+            NotificationTone::from_setting_value("sparta"),
+            NotificationTone::Spartan
+        );
+        assert_eq!(
+            NotificationTone::from_setting_value("unknown"),
+            NotificationTone::Spartan
+        );
+    }
+
+    #[test]
+    fn converts_notification_interval_minutes_to_duration() {
+        assert_eq!(notification_delay_from_interval(15), std::time::Duration::from_secs(900));
+        assert_eq!(notification_delay_from_interval(60), std::time::Duration::from_secs(3600));
     }
 }
