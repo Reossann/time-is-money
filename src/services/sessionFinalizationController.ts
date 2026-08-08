@@ -35,6 +35,15 @@ export class SessionFinalizationControllerError extends Error {
   }
 }
 
+export type FinalizedSessionResultState =
+  | Readonly<{ status: "not-finalized" }>
+  | Readonly<{ status: "finalizing" }>
+  | Readonly<{
+      status: "failed";
+      errorCode: SessionFinalizationErrorCode;
+    }>
+  | Readonly<{ status: "finalized"; result: SessionResult }>;
+
 type ControllerDependencies = Readonly<{
   stopAndSnapshotAppUsage: (endedAt: number) => Promise<
     SessionResultBuildInput["appUsageSnapshot"]
@@ -48,6 +57,7 @@ type FinalizationController = {
   stoppedMeasurement: StoppedMeasurement;
   finalizationPromise: Promise<SessionResult> | null;
   finalizedResult: SessionResult | null;
+  finalizationErrorCode: SessionFinalizationErrorCode | null;
   appUsageSnapshot: SessionResultBuildInput["appUsageSnapshot"] | null;
   appUsageSnapshotPromise: Promise<
     SessionResultBuildInput["appUsageSnapshot"]
@@ -202,6 +212,7 @@ function startFinalization(
   }
 
   useActivityStore.getState().markFinalizing();
+  activeController.finalizationErrorCode = null;
   const stoppedMeasurement = activeController.stoppedMeasurement;
   const finalizationPromise = Promise.all([
     loadAppUsageSnapshot(activeController),
@@ -229,6 +240,7 @@ function startFinalization(
 
       activeController.finalizedResult = result;
       activeController.finalizationPromise = null;
+      activeController.finalizationErrorCode = null;
       useActivityStore.getState().markFinalized(result);
     },
     (error: unknown) => {
@@ -240,6 +252,7 @@ function startFinalization(
         error.code !== "SESSION_MISMATCH"
           ? error.code
           : "BUILD_FAILED";
+      activeController.finalizationErrorCode = errorCode;
       useActivityStore.getState().markFinalizationFailed(errorCode);
     },
   );
@@ -259,6 +272,7 @@ export function stopAndFinalizeMeasurement(
       stoppedMeasurement,
       finalizationPromise: null,
       finalizedResult: null,
+      finalizationErrorCode: null,
       appUsageSnapshot: null,
       appUsageSnapshotPromise: null,
       hourlyRateSettings: null,
@@ -279,6 +293,29 @@ export function retrySessionFinalization(): Promise<SessionResult> {
   }
 
   return startFinalization(controller);
+}
+
+/**
+ * Returns the one finalized snapshot for consumers such as result display and
+ * persistence. This boundary never rebuilds a result from the live store.
+ */
+export function getFinalizedSessionResult(): FinalizedSessionResultState {
+  if (controller === null) {
+    return Object.freeze({ status: "not-finalized" });
+  }
+  if (controller.finalizedResult !== null) {
+    return Object.freeze({ status: "finalized", result: controller.finalizedResult });
+  }
+  if (controller.finalizationPromise !== null) {
+    return Object.freeze({ status: "finalizing" });
+  }
+  if (controller.finalizationErrorCode !== null) {
+    return Object.freeze({
+      status: "failed",
+      errorCode: controller.finalizationErrorCode,
+    });
+  }
+  return Object.freeze({ status: "not-finalized" });
 }
 
 export function resetSessionFinalizationControllerForTests(): void {

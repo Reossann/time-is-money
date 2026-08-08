@@ -1,5 +1,6 @@
 import { useActivityStore } from "../stores/useActivityStore";
 import {
+  getFinalizedSessionResult,
   retrySessionFinalization,
   stopAndFinalizeMeasurement,
 } from "../services/sessionFinalizationController";
@@ -15,6 +16,7 @@ export function useSessionFinalization() {
     status: measurementStatus,
     result,
     errorCode,
+    getFinalizedSessionResult,
     stopAndFinalizeMeasurement,
     retrySessionFinalization,
   } as const;

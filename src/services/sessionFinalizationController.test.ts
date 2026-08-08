@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDefaultHourlyRateSettings } from "./hourlyRateSettingsService";
 import {
   configureSessionFinalizationControllerForTests,
+  getFinalizedSessionResult,
   resetSessionFinalizationControllerForTests,
   retrySessionFinalization,
   stopAndFinalizeMeasurement,
@@ -75,6 +76,37 @@ describe("sessionFinalizationController", () => {
     resetSessionFinalizationControllerForTests();
   });
 
+  it("gives result display and persistence consumers the same finalized object", async () => {
+    const displayConsumer = () => getFinalizedSessionResult();
+    const persistenceConsumer = () => getFinalizedSessionResult();
+    configureSessionFinalizationControllerForTests({
+      stopAndSnapshotAppUsage: vi.fn().mockResolvedValue(snapshot),
+      hourlyRateSettingsRepository: {
+        load: vi.fn().mockResolvedValue(createDefaultHourlyRateSettings()),
+      },
+      categoryProvider: { load: vi.fn().mockResolvedValue(new Map()) },
+      buildSessionResult: () => result,
+    });
+
+    expect(displayConsumer()).toEqual({ status: "not-finalized" });
+    startMeasurement();
+    const finalization = stopAndFinalizeMeasurement(4_000);
+    expect(displayConsumer()).toEqual({ status: "finalizing" });
+    await expect(finalization).resolves.toBe(result);
+    await Promise.resolve();
+
+    const forDisplay = displayConsumer();
+    const forPersistence = persistenceConsumer();
+    expect(forDisplay).toMatchObject({ status: "finalized", result });
+    expect(forPersistence).toMatchObject({ status: "finalized", result });
+    if (forDisplay.status !== "finalized" || forPersistence.status !== "finalized") {
+      throw new Error("finalized result should be available to both consumers");
+    }
+    expect(forDisplay.result).toBe(result);
+    expect(forPersistence.result).toBe(result);
+    expect(forDisplay.result).toBe(forPersistence.result);
+  });
+
   it("shares first stop, context loading, and the finalized result", async () => {
     const stopAndSnapshot = vi.fn().mockResolvedValue(snapshot);
     const loadSettings = vi
@@ -112,7 +144,6 @@ describe("sessionFinalizationController", () => {
       finalizedResult: result,
       finalizationErrorCode: null,
     });
-
     await expect(stopAndFinalizeMeasurement(20_000)).resolves.toBe(result);
     expect(stopAndSnapshot).toHaveBeenCalledOnce();
     expect(build).toHaveBeenCalledOnce();
@@ -142,6 +173,10 @@ describe("sessionFinalizationController", () => {
       finalizationErrorCode: "SETTINGS_LOAD_FAILED",
       stoppedMeasurement: { endedAt: 4_000 },
       finalizedResult: null,
+    });
+    expect(getFinalizedSessionResult()).toEqual({
+      status: "failed",
+      errorCode: "SETTINGS_LOAD_FAILED",
     });
 
     await expect(retrySessionFinalization()).resolves.toBe(result);
