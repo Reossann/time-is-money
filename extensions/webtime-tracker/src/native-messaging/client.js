@@ -67,10 +67,14 @@ export function sendNativeMessage(runtime, hostName, message) {
       }
 
       if (response.success !== true) {
+        const responseDetail =
+          typeof response.message === "string" ? response.message : undefined;
+
         reject(
           new NativeMessagingClientError(
             typeof response.code === "string" ? response.code : "SEND_FAILED",
             "Native Messaging Hostがメッセージを受理しませんでした",
+            responseDetail,
           ),
         );
         return;

@@ -50,12 +50,18 @@ describe("sendNativeMessage", () => {
 
   it("rejects APP_UNAVAILABLE responses", async () => {
     const runtime = createRuntime({
-      response: { success: false, code: "APP_UNAVAILABLE" },
+      response: {
+        success: false,
+        code: "APP_UNAVAILABLE",
+        message: "Tauri app bridge unavailable: connection refused",
+      },
     });
 
-    await expect(
-      sendNativeMessage(runtime, "com.timeismoney.app", { type: "URL_CHANGE" }),
-    ).rejects.toMatchObject({ code: "APP_UNAVAILABLE" });
+    await expect(sendNativeMessage(runtime, "com.timeismoney.app", { type: "URL_CHANGE" }))
+      .rejects.toMatchObject({
+        code: "APP_UNAVAILABLE",
+        message: expect.stringContaining("Tauri app bridge unavailable: connection refused"),
+      });
   });
 });
 

@@ -429,6 +429,16 @@ mod tests {
     }
 
     #[test]
+    fn removes_windows_extended_length_path_prefix() {
+        assert_eq!(
+            format_windows_path(Path::new(
+                r"\\?\C:\Program Files\Time Is Money\native-messaging-host.exe"
+            )),
+            r"C:\Program Files\Time Is Money\native-messaging-host.exe"
+        );
+    }
+
+    #[test]
     fn builds_manifest_json_with_sanitized_windows_path() {
         let dir = temp_install_dir("manifest");
         fs::create_dir_all(&dir).expect("temp dir should be created");

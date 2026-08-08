@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:tauri": "npm run native-messaging:dev && vite",
+    "dev:tauri": "tauri dev",
     "build": "tsc --noEmit && vite build",
     "build:native-messaging": "node scripts/stage-native-messaging-binaries.mjs",
     "build:native-messaging:dev": "node scripts/stage-native-messaging-binaries.mjs --debug",
@@ -24,6 +24,7 @@
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-autostart": "^2.0.0",
     "@tauri-apps/plugin-store": "^2.4.4",
+    "lucide-react": "^0.268.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "^4.1.8",
