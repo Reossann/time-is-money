@@ -25,11 +25,22 @@ export const appRuleSchema = z.object({
   category: activityCategorySchema,
 });
 
+export const notificationToneSchema = z.enum(["sparta", "gentle"]);
+
+export const notificationIntervalMinutesSchema = z.union([
+  z.literal(15),
+  z.literal(30),
+  z.literal(60),
+  z.literal(120),
+]);
+
 export const appSettingsSchema = z.object({
   hourlyRate: z.number(),
   notificationThresholdMinutes: z.number(),
   idleThresholdMinutes: z.number(),
   notificationsEnabled: z.boolean(),
+  notificationTone: notificationToneSchema,
+  notificationIntervalMinutes: notificationIntervalMinutesSchema,
 });
 
 export const activeWindowInfoSchema = z.object({
@@ -37,7 +48,6 @@ export const activeWindowInfoSchema = z.object({
   windowTitle: z.string(),
   processId: z.number().int().positive().max(0xffff_ffff),
 });
-
 export const nativeWebAppEventSchema = z.discriminatedUnion("type", [
   z
     .object({
