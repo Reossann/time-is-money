@@ -2,6 +2,10 @@ import {
   hourlyRateSettingsRepository,
   type HourlyRateSettingsRepository,
 } from "../repositories/hourlyRateSettingsRepository";
+import {
+  appCategorySettingsRepository,
+  type AppCategorySettingsRepository,
+} from "../repositories/appCategorySettingsRepository";
 import { stopAndSnapshotAppUsage } from "../hooks/useMeasurementTracking";
 import { useActivityStore } from "../stores/useActivityStore";
 import type { ActivityCategory } from "../types/activity";
@@ -12,6 +16,7 @@ import type {
   StoppedMeasurement,
 } from "../types/sessionResult";
 import { hourlyRateSettingsSchema } from "../utils/hourlyRateSettingsSchemas";
+import { createAppCategoryMap } from "./appCategorySettingsService";
 import {
   buildSessionResult,
   type SessionResultBuildInput,
@@ -68,14 +73,22 @@ type FinalizationController = {
   categoriesPromise: Promise<ReadonlyMap<string, ActivityCategory | null>> | null;
 };
 
-const emptyCategoryProvider: SessionCategoryProvider = Object.freeze({
-  load: async () => new Map(),
-});
+export function createSessionCategoryProvider(
+  repository: Pick<AppCategorySettingsRepository, "load">,
+): SessionCategoryProvider {
+  return Object.freeze({
+    load: async () => createAppCategoryMap(await repository.load()),
+  });
+}
+
+const storedCategoryProvider = createSessionCategoryProvider(
+  appCategorySettingsRepository,
+);
 
 const defaultDependencies: ControllerDependencies = {
   stopAndSnapshotAppUsage,
   hourlyRateSettingsRepository,
-  categoryProvider: emptyCategoryProvider,
+  categoryProvider: storedCategoryProvider,
   buildSessionResult,
 };
 

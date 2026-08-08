@@ -3,11 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDefaultHourlyRateSettings } from "./hourlyRateSettingsService";
 import {
   configureSessionFinalizationControllerForTests,
+  createSessionCategoryProvider,
   getFinalizedSessionResult,
   resetSessionFinalizationControllerForTests,
   retrySessionFinalization,
   stopAndFinalizeMeasurement,
 } from "./sessionFinalizationController";
+import {
+  createDefaultAppCategorySettings,
+  setAppCategory,
+} from "./appCategorySettingsService";
 import { useActivityStore } from "../stores/useActivityStore";
 import type { AppUsageSnapshot } from "../types/appUsageTracking";
 import type { SessionResult } from "../types/sessionResult";
@@ -105,6 +110,38 @@ describe("sessionFinalizationController", () => {
     expect(forDisplay.result).toBe(result);
     expect(forPersistence.result).toBe(result);
     expect(forDisplay.result).toBe(forPersistence.result);
+  });
+
+  it("loads configured categories as the fixed finalization snapshot", async () => {
+    const categorySettings = setAppCategory(
+      "Code.exe",
+      "productive",
+      createDefaultAppCategorySettings(),
+    );
+    const loadCategories = vi.fn().mockResolvedValue(categorySettings);
+    const categoryProvider = createSessionCategoryProvider({
+      load: loadCategories,
+    });
+    const build = vi.fn().mockReturnValue(result);
+    configureSessionFinalizationControllerForTests({
+      stopAndSnapshotAppUsage: vi.fn().mockResolvedValue(snapshot),
+      hourlyRateSettingsRepository: {
+        load: vi.fn().mockResolvedValue(createDefaultHourlyRateSettings()),
+      },
+      categoryProvider,
+      buildSessionResult: build,
+    });
+    startMeasurement();
+
+    await expect(stopAndFinalizeMeasurement(4_000)).resolves.toBe(result);
+    await Promise.resolve();
+
+    expect(loadCategories).toHaveBeenCalledOnce();
+    expect(build).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categories: new Map([["code.exe", "productive"]]),
+      }),
+    );
   });
 
   it("shares first stop, context loading, and the finalized result", async () => {
