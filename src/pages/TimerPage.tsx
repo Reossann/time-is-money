@@ -41,14 +41,6 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
   const activeSessionSeconds = activeSession
     ? getActiveSessionSeconds(activeSession.startedAt, currentTime)
     : 0;
-  const currentSessionStartedLabel = activeSession
-    ? new Intl.DateTimeFormat("ja-JP", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }).format(activeSession.startedAt)
-    : null;
-
   let formattedTime: string;
   try {
     if (typeof elapsedSeconds !== "number" || elapsedSeconds < 0) {
@@ -88,24 +80,6 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
               ? "受信データを確認できませんでした"
               : "接続待機中"}
         </p>
-      </section>
-
-      <section className="current-webapp-section">
-        <h3>現在のChromeサイト</h3>
-        {activeSession ? (
-          <div className="current-webapp-card">
-            <div className="webapp-name">{activeSession.webAppName}</div>
-            <div className="current-webapp-meta">
-              <span>セッション計測中</span>
-              {currentSessionStartedLabel && (
-                <span>開始: {currentSessionStartedLabel}</span>
-              )}
-              <span>{formatSessionDuration(activeSessionSeconds)}</span>
-            </div>
-          </div>
-        ) : (
-          <p>現在、Chromeで計測対象のサイトは検出されていません。</p>
-        )}
       </section>
 
       <section className="web-apps-section">

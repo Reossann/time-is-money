@@ -188,23 +188,6 @@ button {
   letter-spacing: 0.02em;
 }
 
-.current-webapp-card {
-  display: grid;
-  gap: 8px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(31, 111, 235, 0.12), rgba(31, 111, 235, 0.05));
-  border: 1px solid rgba(31, 111, 235, 0.18);
-}
-
-.current-webapp-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
-
 .webapp-list {
   list-style: none;
   display: grid;

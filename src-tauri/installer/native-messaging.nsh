@@ -9,6 +9,7 @@
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
+  DetailPrint "Registering Native Messaging Host."
   nsExec::ExecToStack '"$INSTDIR\native-messaging-setup.exe" install "$INSTDIR"'
   Pop $R9
   Pop $R8
@@ -21,6 +22,10 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
+  nsExec::ExecToStack 'taskkill /F /IM native-messaging-host.exe /T'
+  Pop $R0
+  Pop $R1
+
   nsExec::ExecToStack '"$INSTDIR\native-messaging-setup.exe" uninstall "$INSTDIR"'
   Pop $R9
   Pop $R8
@@ -29,10 +34,6 @@
   ${Else}
     DetailPrint "Native Messaging Host cleanup succeeded."
   ${EndIf}
-
-  nsExec::ExecToStack 'taskkill /F /IM native-messaging-host.exe /T'
-  Pop $R0
-  Pop $R1
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL

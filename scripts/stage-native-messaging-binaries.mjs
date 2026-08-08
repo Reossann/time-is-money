@@ -1,7 +1,7 @@
-import { cpSync, mkdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { cpSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = dirname(scriptDirectory);
@@ -46,12 +46,10 @@ execFileSync(
 const rustcVersion = execFileSync("rustc", ["-vV"], { encoding: "utf8" });
 const targetTriple = rustcVersion.match(/^host: (.+)$/m)?.[1];
 
-if (!targetTriple) {
-  throw new Error("Could not determine the Rust target triple.");
-}
-
-if (!targetTriple.endsWith("-windows-msvc")) {
-  throw new Error(`Native Messaging binaries require a Windows MSVC target: ${targetTriple}`);
+if (!targetTriple?.endsWith("-windows-msvc")) {
+  throw new Error(
+    `Native Messaging binaries require a Windows MSVC target (received: ${targetTriple ?? "unknown"}).`,
+  );
 }
 
 mkdirSync(binariesDirectory, { recursive: true });
@@ -59,6 +57,10 @@ mkdirSync(binariesDirectory, { recursive: true });
 for (const binary of binaries) {
   const source = join(outputDirectory, `${binary}.exe`);
   const destination = join(binariesDirectory, `${binary}-${targetTriple}.exe`);
+
+  if (!existsSync(source) || statSync(source).size === 0) {
+    throw new Error(`Missing Native Messaging binary: ${source}`);
+  }
 
   cpSync(source, destination);
   console.log(`Staged ${binary} (${profile}) for ${targetTriple}.`);

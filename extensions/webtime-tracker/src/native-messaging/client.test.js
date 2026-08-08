@@ -35,14 +35,33 @@ describe("sendNativeMessage", () => {
     ).rejects.toMatchObject({ code: "HOST_UNREGISTERED" });
   });
 
-  it("rejects APP_UNAVAILABLE responses", async () => {
+  it("classifies a Japanese unregistered-host error", async () => {
     const runtime = createRuntime({
-      response: { success: false, code: "APP_UNAVAILABLE" },
+      response: undefined,
+      lastError: {
+        message: "指定されたネイティブ メッセージング ホストが見つかりません。",
+      },
     });
 
     await expect(
       sendNativeMessage(runtime, "com.timeismoney.app", { type: "URL_CHANGE" }),
-    ).rejects.toMatchObject({ code: "APP_UNAVAILABLE" });
+    ).rejects.toMatchObject({ code: "HOST_UNREGISTERED" });
+  });
+
+  it("rejects APP_UNAVAILABLE responses", async () => {
+    const runtime = createRuntime({
+      response: {
+        success: false,
+        code: "APP_UNAVAILABLE",
+        message: "Tauri app bridge unavailable: connection refused",
+      },
+    });
+
+    await expect(sendNativeMessage(runtime, "com.timeismoney.app", { type: "URL_CHANGE" }))
+      .rejects.toMatchObject({
+        code: "APP_UNAVAILABLE",
+        message: expect.stringContaining("Tauri app bridge unavailable: connection refused"),
+      });
   });
 });
 

@@ -144,6 +144,8 @@ pub fn start_listener(app_handle: tauri::AppHandle) -> io::Result<()> {
 }
 
 fn handle_connection(app_handle: &tauri::AppHandle, stream: &mut TcpStream) -> io::Result<()> {
+    eprintln!("🟢 [Bridge] Connection accepted");
+
     let Some(payload) = read_frame(stream).map_err(|error| match error {
         NativeMessagingFrameError::Io(io_error) => io_error,
         NativeMessagingFrameError::MessageTooLarge(message_length) => io::Error::new(
@@ -152,6 +154,7 @@ fn handle_connection(app_handle: &tauri::AppHandle, stream: &mut TcpStream) -> i
         ),
     })?
     else {
+        eprintln!("🟡 [Bridge] Empty payload received");
         return Ok(());
     };
 
@@ -169,14 +172,16 @@ fn handle_connection(app_handle: &tauri::AppHandle, stream: &mut TcpStream) -> i
         Err(error) => NativeBridgeAck::error(format!("invalid native bridge payload: {error}")),
     };
 
-    let response = serde_json::to_vec(&ack).map_err(|error| {
+    let ack_payload = serde_json::to_vec(&ack).map_err(|error| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("serialize native bridge ack failed: {error}"),
         )
     })?;
 
-    write_frame(stream, &response)
+    write_frame(stream, &ack_payload)?;
+
+    Ok(())
 }
 
 #[tauri::command]
