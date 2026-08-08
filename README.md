@@ -135,6 +135,16 @@ npm run test:rust
 
 Rustの単体テストは対象モジュール内へ`#[cfg(test)] mod tests`として追加します。
 
+## セッション結果（version 1）
+
+タイマーを停止すると、停止時刻を固定した1つの`SessionResult`を確定できます。結果にはsession ID、開始・終了時刻、tracked / untracked時間、アプリ別の利用時間、適用時給、分類、獲得・浪費・差額の整数円を含みます。表示処理と将来の保存処理は、同じ確定済みobjectを読む前提です。
+
+設定画面の「アプリ分類」から、アプリ名ごとに`productive`、`waste`、`neutral`を保存できます。停止時にはその設定をsnapshotとして固定し、以後の設定変更で確定済み結果は変わりません。未設定アプリだけを`null`として保持し、金額は0円になります。
+
+開発時だけタイマーページに結果診断パネルが表示されます。停止・再試行と、アプリ名、時間、分類、時給、金額を確認できます。本番buildにはこの入口を含めません。window title、URL、PID、full path、raw errorは結果・診断・ログへ出しません。
+
+未実装: 結果画面、SQLite保存、累計・同期。本番の停止ボタンや結果表示は別Issueで接続します。
+
 ## Release
 
 新しいアプリバージョンの更新、検証、Pull Request、タグ作成、GitHub Release確認は、[Release手順](.github/RELEASE_STEPS.md)に従ってください。設定値の更新漏れは`npm run version:check`で確認できます。

@@ -11,8 +11,10 @@ describe("useActivityStore", () => {
       elapsedSeconds: 0,
       startedAt: null,
       sessionId: null,
-      measurementStatus: "idle",
-      stoppedMeasurement: null,
+    measurementStatus: "idle",
+    stoppedMeasurement: null,
+    finalizedResult: null,
+    finalizationErrorCode: null,
     });
   });
 

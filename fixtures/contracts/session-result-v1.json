@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "00000000-0000-4000-8000-000000000032",
+  "startedAt": 1000,
+  "endedAt": 10000,
+  "durationSeconds": 9,
+  "trackedDurationSeconds": 8,
+  "untrackedDurationSeconds": 1,
+  "apps": [
+    {
+      "appId": "code.exe",
+      "processName": "Code.exe",
+      "durationSeconds": 4,
+      "category": "productive",
+      "hourlyRateYen": 3600.0,
+      "money": {
+        "earnedYen": 4,
+        "wastedYen": 0,
+        "netYen": 4
+      }
+    },
+    {
+      "appId": "chrome.exe",
+      "processName": "chrome.exe",
+      "durationSeconds": 3,
+      "category": "waste",
+      "hourlyRateYen": 1200.0,
+      "money": {
+        "earnedYen": 0,
+        "wastedYen": 1,
+        "netYen": -1
+      }
+    },
+    {
+      "appId": "notepad.exe",
+      "processName": "notepad.exe",
+      "durationSeconds": 1,
+      "category": null,
+      "hourlyRateYen": 500.5,
+      "money": {
+        "earnedYen": 0,
+        "wastedYen": 0,
+        "netYen": 0
+      }
+    }
+  ],
+  "totals": {
+    "earnedYen": 4,
+    "wastedYen": 1,
+    "netYen": 3
+  }
+}
