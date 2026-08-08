@@ -11,6 +11,12 @@ export type MeasurementStatus =
 
 export const SESSION_RESULT_SCHEMA_VERSION = 1 as const;
 
+export type SessionFinalizationErrorCode =
+  | "TRACKING_STOP_FAILED"
+  | "SETTINGS_LOAD_FAILED"
+  | "CATEGORY_LOAD_FAILED"
+  | "BUILD_FAILED";
+
 export type RunningMeasurement = Readonly<{
   sessionId: string;
   /** Unix epoch milliseconds. */
