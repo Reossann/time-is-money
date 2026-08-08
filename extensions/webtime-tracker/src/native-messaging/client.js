@@ -44,7 +44,8 @@ export function sendNativeMessage(runtime, hostName, message) {
       const lastError = runtime.lastError;
 
       if (lastError) {
-        const runtimeMessage = lastError.message ?? "Chrome did not provide an error message";
+        const runtimeMessage =
+          lastError.message ?? "Chrome did not provide an error message";
 
         reject(
           new NativeMessagingClientError(
@@ -67,9 +68,17 @@ export function sendNativeMessage(runtime, hostName, message) {
       }
 
       if (response.success !== true) {
+        const responseCode =
+          typeof response.code === "string" ? response.code : "SEND_FAILED";
+        const responseMessage =
+          typeof response.message === "string"
+            ? response.message
+            : "Native Messaging Host rejected the message";
+
         reject(
           new NativeMessagingClientError(
-            typeof response.code === "string" ? response.code : "SEND_FAILED",
+            responseCode,
+            `${responseCode}: ${responseMessage}`,
             "Native Messaging Hostがメッセージを受理しませんでした",
           ),
         );
