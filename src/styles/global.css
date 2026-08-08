@@ -635,6 +635,31 @@ button {
   font-size: 13px;
 }
 
+.app-category-settings {
+  margin-top: 24px;
+}
+
+.app-category-settings form,
+.app-category-settings__list li {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-category-settings label {
+  display: grid;
+  gap: 4px;
+}
+
+.app-category-settings__list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 .result-flow {
   min-height: 100vh;
   display: grid;

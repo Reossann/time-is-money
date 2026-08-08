@@ -5,6 +5,7 @@ import {
   isEnabled as isAutostartEnabled,
 } from '@tauri-apps/plugin-autostart';
 import { HourlyRateSettingsSection } from '../components/settings/HourlyRateSettingsSection';
+import { AppCategorySettingsSection } from '../components/settings/AppCategorySettingsSection';
 import { createDefaultSettings, loadSettings, saveSettings } from '../services/settingsService';
 import type { AppSettings, NotificationIntervalMinutes, NotificationTone } from '../types/settings';
 
@@ -99,6 +100,7 @@ export function SettingsPage() {
       </section>
 
       <HourlyRateSettingsSection />
+      <AppCategorySettingsSection />
 
       <section>
         <h3>通知設定</h3>
