@@ -40,6 +40,9 @@ jobs:
 
   rust-check:
     runs-on: windows-latest
+    # Native Messaging の sidecar は配布ビルド時に生成する。静的検査では不要。
+    env:
+      TAURI_CONFIG: '{"bundle":{"externalBin":[]}}'
 
     steps:
       - name: Checkout repository

@@ -2,6 +2,7 @@ import { sanitizeTrackedUrl } from "../tracking-utils.js";
 
 export const NATIVE_MESSAGE_MAX_BYTES = 256 * 1024;
 export const NATIVE_MESSAGE_TYPE = "URL_CHANGE";
+export const NATIVE_MESSAGE_STOP_TYPE = "TRACKING_STOP";
 
 export const nativeMessageErrorCode = Object.freeze({
   invalidJson: "INVALID_JSON",
@@ -31,7 +32,7 @@ export function sanitizeNativeMessageUrl(rawUrl) {
 /**
  * Native Messaging の URL_CHANGE メッセージを検証して正規化する。
  * @param {unknown} payload
- * @returns {{ok: true, value: {type: string, url: string, timestamp: number, sanitizedUrl: string}} | {ok: false, code: string, message: string}}
+ * @returns {{ok: true, value: {type: string, timestamp: number, url?: string, sanitizedUrl?: string}} | {ok: false, code: string, message: string}}
  */
 export function validateNativeMessage(payload) {
   if (!isPlainObject(payload)) {
@@ -44,19 +45,11 @@ export function validateNativeMessage(payload) {
 
   const { type, url, timestamp } = payload;
 
-  if (type !== NATIVE_MESSAGE_TYPE) {
+  if (type !== NATIVE_MESSAGE_TYPE && type !== NATIVE_MESSAGE_STOP_TYPE) {
     return {
       ok: false,
       code: nativeMessageErrorCode.invalidMessageType,
       message: `Unsupported message type: ${String(type)}`,
-    };
-  }
-
-  if (typeof url !== "string") {
-    return {
-      ok: false,
-      code: nativeMessageErrorCode.invalidUrl,
-      message: "URL must be a string",
     };
   }
 
@@ -65,6 +58,24 @@ export function validateNativeMessage(payload) {
       ok: false,
       code: nativeMessageErrorCode.invalidJson,
       message: "timestamp must be an integer number",
+    };
+  }
+
+  if (type === NATIVE_MESSAGE_STOP_TYPE) {
+    return {
+      ok: true,
+      value: {
+        type: NATIVE_MESSAGE_STOP_TYPE,
+        timestamp,
+      },
+    };
+  }
+
+  if (typeof url !== "string") {
+    return {
+      ok: false,
+      code: nativeMessageErrorCode.invalidUrl,
+      message: "URL must be a string",
     };
   }
 

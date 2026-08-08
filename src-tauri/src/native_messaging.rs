@@ -5,10 +5,11 @@ use serde_json::Value;
 use std::io::{self, Read, Write};
 use url::Url;
 
-use crate::native_bridge::{forward_native_web_app_change, NativeWebAppChange};
+use crate::native_bridge::{forward_native_web_app_event, NativeWebAppEvent};
 
 pub const MAX_MESSAGE_BYTES: u32 = 256 * 1024;
 const MESSAGE_TYPE_URL_CHANGE: &str = "URL_CHANGE";
+const MESSAGE_TYPE_TRACKING_STOP: &str = "TRACKING_STOP";
 const CODE_OK: &str = "OK";
 const CODE_INVALID_JSON: &str = "INVALID_JSON";
 const CODE_INVALID_MESSAGE_TYPE: &str = "INVALID_MESSAGE_TYPE";
@@ -39,12 +40,12 @@ pub struct NativeMessagingResponse {
 }
 
 impl NativeMessagingResponse {
-    fn ok(sanitized_url: String) -> Self {
+    fn ok(message: &str, sanitized_url: Option<String>) -> Self {
         Self {
             success: true,
             code: CODE_OK.to_string(),
-            message: "URL accepted".to_string(),
-            sanitized_url: Some(sanitized_url),
+            message: message.to_string(),
+            sanitized_url,
         }
     }
 
@@ -104,6 +105,7 @@ fn sanitize_url(raw_url: &str) -> Result<String, String> {
 
     let _ = url.set_username("");
     let _ = url.set_password(None);
+    url.set_path("/");
     url.set_query(None);
     url.set_fragment(None);
 
@@ -138,7 +140,9 @@ pub fn handle_message(raw_payload: &[u8]) -> NativeMessagingResponse {
     };
 
     let message_type = object.get("type").and_then(Value::as_str);
-    if message_type != Some(MESSAGE_TYPE_URL_CHANGE) {
+    if message_type != Some(MESSAGE_TYPE_URL_CHANGE)
+        && message_type != Some(MESSAGE_TYPE_TRACKING_STOP)
+    {
         return build_error_response(
             CODE_INVALID_MESSAGE_TYPE,
             format!(
@@ -147,10 +151,6 @@ pub fn handle_message(raw_payload: &[u8]) -> NativeMessagingResponse {
             ),
         );
     }
-
-    let Some(url_value) = object.get("url").and_then(Value::as_str) else {
-        return build_error_response(CODE_INVALID_URL, "URL must be a string");
-    };
 
     let Some(timestamp_value) = object.get("timestamp") else {
         return build_error_response(CODE_INVALID_JSON, "timestamp must be present");
@@ -171,12 +171,38 @@ pub fn handle_message(raw_payload: &[u8]) -> NativeMessagingResponse {
         return build_error_response(CODE_INVALID_JSON, "timestamp must be greater than zero");
     }
 
+    if message_type == Some(MESSAGE_TYPE_TRACKING_STOP) {
+        return NativeMessagingResponse::ok("Tracking stop accepted", None);
+    }
+
+    let Some(url_value) = object.get("url").and_then(Value::as_str) else {
+        return build_error_response(CODE_INVALID_URL, "URL must be a string");
+    };
+
     let sanitized_url = match sanitize_url(url_value) {
         Ok(sanitized_url) => sanitized_url,
         Err(message) => return build_error_response(CODE_INVALID_URL, message),
     };
 
-    NativeMessagingResponse::ok(sanitized_url)
+    NativeMessagingResponse::ok("URL accepted", Some(sanitized_url))
+}
+
+fn bridge_event_from_payload(
+    payload: &[u8],
+    sanitized_url: Option<String>,
+) -> Option<NativeWebAppEvent> {
+    let value = serde_json::from_slice::<Value>(payload).ok()?;
+    let message_type = value.get("type")?.as_str()?;
+    let timestamp = value.get("timestamp")?.as_u64()?;
+
+    match message_type {
+        MESSAGE_TYPE_URL_CHANGE => Some(NativeWebAppEvent::UrlChange {
+            url: sanitized_url?,
+            timestamp,
+        }),
+        MESSAGE_TYPE_TRACKING_STOP => Some(NativeWebAppEvent::TrackingStop { timestamp }),
+        _ => None,
+    }
 }
 
 /// Native Messaging Host のメインループ。
@@ -244,15 +270,24 @@ pub fn run_host_with_io<R: Read, W: Write, E: Write>(
 
     let response = handle_message(&payload);
     if response.success {
-        let bridge_payload = NativeWebAppChange {
-            url: response
-                .sanitized_url
-                .clone()
-                .unwrap_or_else(|| payload_url_for_bridge(&payload)),
-            timestamp: extract_timestamp(&payload).unwrap_or(0),
+        let Some(bridge_event) =
+            bridge_event_from_payload(&payload, response.sanitized_url.clone())
+        else {
+            let response = NativeMessagingResponse::error(
+                CODE_INTERNAL_ERROR,
+                "Could not create native bridge event",
+            );
+            let response_bytes = serde_json::to_vec(&response).map_err(|error| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("serialize response failed: {error}"),
+                )
+            })?;
+            write_frame(&mut writer, &response_bytes)?;
+            return Ok(());
         };
 
-        if let Err(error) = forward_native_web_app_change(&bridge_payload) {
+        if let Err(error) = forward_native_web_app_event(&bridge_event) {
             let response = NativeMessagingResponse::error(
                 "APP_UNAVAILABLE",
                 format!("Tauri app bridge unavailable: {error}"),
@@ -307,24 +342,6 @@ pub fn run_host_with_io<R: Read, W: Write, E: Write>(
     Ok(())
 }
 
-fn payload_url_for_bridge(payload: &[u8]) -> String {
-    serde_json::from_slice::<Value>(payload)
-        .ok()
-        .and_then(|value| {
-            value
-                .get("url")
-                .and_then(Value::as_str)
-                .map(ToOwned::to_owned)
-        })
-        .unwrap_or_default()
-}
-
-fn extract_timestamp(payload: &[u8]) -> Option<u64> {
-    serde_json::from_slice::<Value>(payload)
-        .ok()
-        .and_then(|value| value.get("timestamp").and_then(Value::as_u64))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -347,7 +364,31 @@ mod tests {
         assert_eq!(response.code, CODE_OK);
         assert_eq!(
             response.sanitized_url.as_deref(),
-            Some("https://docs.google.com/document/d/example")
+            Some("https://docs.google.com/")
+        );
+    }
+
+    #[test]
+    fn handles_tracking_stop_message() {
+        let response = handle_message(br#"{"type":"TRACKING_STOP","timestamp":1700000000000}"#);
+
+        assert!(response.success);
+        assert_eq!(response.code, CODE_OK);
+        assert_eq!(response.sanitized_url, None);
+    }
+
+    #[test]
+    fn builds_tracking_stop_bridge_event() {
+        let event = bridge_event_from_payload(
+            br#"{"type":"TRACKING_STOP","timestamp":1700000000000}"#,
+            None,
+        );
+
+        assert_eq!(
+            event,
+            Some(NativeWebAppEvent::TrackingStop {
+                timestamp: 1_700_000_000_000,
+            })
         );
     }
 

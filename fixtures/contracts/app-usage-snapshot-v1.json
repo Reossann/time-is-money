@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "00000000-0000-4000-8000-000000000025",
+  "startedAt": 1000,
+  "capturedAt": 4500,
+  "durationMilliseconds": 3500,
+  "trackedDurationMilliseconds": 2700,
+  "untrackedDurationMilliseconds": 800,
+  "apps": [
+    {
+      "processName": "Code.exe",
+      "durationMilliseconds": 1500
+    },
+    {
+      "processName": "CODE.EXE",
+      "durationMilliseconds": 700
+    },
+    {
+      "processName": "notepad.exe",
+      "durationMilliseconds": 500
+    }
+  ]
+}

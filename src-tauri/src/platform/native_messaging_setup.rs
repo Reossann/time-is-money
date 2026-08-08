@@ -420,7 +420,10 @@ mod tests {
         let config = load_config().expect("config should load");
 
         assert_eq!(config.host_name, "com.timeismoney.app");
-        assert!(!config.allowed_origins.is_empty());
+        assert_eq!(
+            config.allowed_origins,
+            vec!["chrome-extension://cdoabncafaeaijdgbjioennfmebpgcih/"]
+        );
     }
 
     #[test]

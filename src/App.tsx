@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ResultFlowPreview } from "./components/result/ResultFlowPreview";
 import { useNavigation } from "./hooks/useNavigation";
-import { useActivityStore } from "./stores/useActivityStore";
+import { useMeasurementTracking } from "./hooks/useMeasurementTracking";
 import { useResultFlowStore } from "./stores/useResultFlowStore";
 import { TimerPage } from "./pages/TimerPage";
 import { CalendarPage } from "./pages/CalendarPage";
@@ -21,16 +21,7 @@ const pageMap: Record<NavigationId, React.ReactNode> = {
 export function App() {
   const { currentPage, setCurrentPage } = useNavigation();
   const [isResultFlowOpen, setIsResultFlowOpen] = useState(false);
-
-  useEffect(() => {
-    useActivityStore.getState().startMeasurement();
-
-    const intervalId = window.setInterval(() => {
-      useActivityStore.getState().syncElapsed();
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
+  useMeasurementTracking();
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;

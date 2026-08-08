@@ -10,9 +10,9 @@ describe("sanitizeTrackedUrl", () => {
   it.each([
     [
       "https://docs.google.com/document/d/example?usp=sharing#heading=h.1",
-      "https://docs.google.com/document/d/example",
+      "https://docs.google.com/",
     ],
-    ["http://example.com/path?query=value#section", "http://example.com/path"],
+    ["http://example.com/path?query=value#section", "http://example.com/"],
   ])("sanitizes a trackable URL", (rawUrl, expected) => {
     expect(sanitizeTrackedUrl(rawUrl)).toBe(expected);
   });
@@ -29,19 +29,19 @@ describe("sanitizeTrackedUrl", () => {
 });
 
 describe("getNextTrackedUrl", () => {
-  it("returns a sanitized URL when the page changed", () => {
+  it("returns a sanitized URL when the domain changed", () => {
     expect(
       getNextTrackedUrl(
         "https://github.com/Reossann/time-is-money",
         "https://github.com/Reossann/time-is-money/issues?state=open",
       ),
-    ).toBe("https://github.com/Reossann/time-is-money/issues");
+    ).toBe("https://github.com/");
   });
 
-  it("suppresses a duplicate URL after sanitization", () => {
+  it("suppresses a page change within the same domain", () => {
     expect(
       getNextTrackedUrl(
-        "https://github.com/Reossann/time-is-money/issues",
+        "https://github.com/",
         "https://github.com/Reossann/time-is-money/issues?state=open#issue-46",
       ),
     ).toBeNull();
@@ -50,10 +50,10 @@ describe("getNextTrackedUrl", () => {
 
 describe("inferAppName", () => {
   it.each([
-    ["https://docs.google.com/document/d/example", "Google Docs"],
-    ["https://docs.google.com/spreadsheets/d/example", "Google Sheets"],
-    ["https://docs.google.com/presentation/d/example", "Google Slides"],
-  ])("identifies Google workspace URLs", (url, expected) => {
+    ["https://docs.google.com/document/d/example", "Google Workspace"],
+    ["https://docs.google.com/spreadsheets/d/example", "Google Workspace"],
+    ["https://docs.google.com/presentation/d/example", "Google Workspace"],
+  ])("groups Google workspace URLs by domain", (url, expected) => {
     expect(inferAppName(url)).toBe(expected);
   });
 

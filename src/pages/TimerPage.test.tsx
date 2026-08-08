@@ -1,21 +1,30 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TimerPage } from "./TimerPage";
 import { useActivityStore } from "../stores/useActivityStore";
 import { useWebAppStore } from "../stores/useWebAppStore";
+import { resetMeasurementTrackingControllerForTests } from "../hooks/useMeasurementTracking";
 
-describe("DashboardPage", () => {
+describe("TimerPage", () => {
   beforeEach(() => {
+    vi.useRealTimers();
+    resetMeasurementTrackingControllerForTests();
     useActivityStore.setState({ elapsedSeconds: 0, startedAt: null });
     useWebAppStore.setState({
       currentSession: null,
       usageStats: [],
       webApps: [],
+      nativeBridgeStatus: "waiting",
+      lastNativeEventAt: null,
     });
+    vi.restoreAllMocks();
   });
 
-  // HEADのバリデーションテスト
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows a formatter error without triggering a render loop", () => {
     useActivityStore.setState({ elapsedSeconds: -1 });
 
@@ -26,8 +35,8 @@ describe("DashboardPage", () => {
     );
   });
 
-  // HEADの currentSession テスト
-  it("shows the current web app when a session is active", () => {
+  it("shows the active web app and live duration", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_005_000);
     useWebAppStore.setState({
       currentSession: {
         id: "session-1",
@@ -37,34 +46,65 @@ describe("DashboardPage", () => {
         endedAt: null,
         durationSeconds: 0,
       },
-      usageStats: [],
-      webApps: [],
-    });
-
-    render(<TimerPage />);
-
-    expect(screen.getByText("Google Docs")).toBeInTheDocument();
-    expect(screen.getByText("セッション計測中")).toBeInTheDocument();
-  });
-
-  // マージ元のテストと共通で追加するなら：usageStats の表示テスト
-  it("displays web app usage statistics", () => {
-    useWebAppStore.setState({
-      currentSession: null,
       usageStats: [
         {
           webAppId: "google-docs",
           webAppName: "Google Docs",
-          cumulativeSeconds: 3600,
-          sessionCount: 2,
+          cumulativeSeconds: 3,
+          sessionCount: 1,
         },
       ],
-      webApps: [],
+      nativeBridgeStatus: "connected",
     });
 
     render(<TimerPage />);
 
-    expect(screen.getByText("Google Docs")).toBeInTheDocument();
-    expect(screen.getByText("セッション数: 2")).toBeInTheDocument();
+    expect(screen.getAllByText("Google Docs")).toHaveLength(2);
+    expect(screen.getByText("セッション計測中")).toBeInTheDocument();
+    expect(screen.getByText("00:00:05")).toBeInTheDocument();
+    expect(screen.getByText("00:00:08")).toBeInTheDocument();
+    expect(screen.getByText("接続済み")).toBeInTheDocument();
+  });
+
+  it("updates the active duration every second", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    useWebAppStore.setState({
+      currentSession: {
+        id: "session-1",
+        webAppId: "github",
+        webAppName: "GitHub",
+        startedAt: 1_700_000_000_000,
+        endedAt: null,
+        durationSeconds: 0,
+      },
+      usageStats: [
+        {
+          webAppId: "github",
+          webAppName: "GitHub",
+          cumulativeSeconds: 0,
+          sessionCount: 1,
+        },
+      ],
+    });
+
+    render(<TimerPage />);
+    expect(screen.getAllByText("00:00:00")).toHaveLength(3);
+
+    act(() => {
+      vi.advanceTimersByTime(2_000);
+    });
+
+    expect(screen.getAllByText("00:00:02")).toHaveLength(2);
+  });
+
+  it("shows the Windows app diagnostics in development", () => {
+    render(<TimerPage />);
+
+    expect(
+      screen.getByRole("region", {
+        name: "Windowsアプリ利用時間の開発診断",
+      }),
+    ).toBeInTheDocument();
   });
 });

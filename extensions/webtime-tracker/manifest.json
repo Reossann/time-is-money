@@ -2,11 +2,13 @@
   "manifest_version": 3,
   "name": "Time Is Money - Web Tracker",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArz/IwsV4b+m7wwFhy9JBdz/4b+bvADgCWqEpNW1dH6lEWm0sbqnbR/80BkCHI2oBRQK++hk2L64khxK5hU/DACVKZ94QPpy5h4m8Y7F59VieXmhyGl5+rcdbk2nME/t12i26rSHl4lBsIJ4xpMD5NJQcf6LoU6J+xoT3bMJ0Q0elKMLb6NdsNJNtMC7eaDl+Cc1NDi3/bcPFIOrQjeG2KuLhgIea+qVulnNHxGtEtREKPNs4Zi2kQvnJwq44wzJrAh8Zm5xs9+wQJGcqgla2L6nEmS7F3i/qySLUmSRUaWLYrE5joLBDvQx25K8yxOAGkLwVR8NOiaxJddFIXMWIGwIDAQAB",
   "description": "PCで開いているウェブアプリの利用時間を自動計測します",
   "permissions": [
     "tabs",
     "nativeMessaging",
-    "storage"
+    "storage",
+    "alarms"
   ],
   "action": {
     "default_popup": "src/popup.html",

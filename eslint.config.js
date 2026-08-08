@@ -7,7 +7,12 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["dist/**", "src-tauri/target/**", "node_modules/**"],
+    ignores: [
+      "dist/**",
+      "src-tauri/target/**",
+      "node_modules/**",
+      ".plans/**",
+    ],
   },
   js.configs.recommended,
   {

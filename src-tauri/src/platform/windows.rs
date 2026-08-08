@@ -70,10 +70,7 @@ pub fn get_active_window_info() -> Result<Option<ActiveWindowInfo>, ActiveWindow
         return Ok(None);
     };
 
-    let process_id = api::window_process_id(window)?;
-    let process = OwnedProcessHandle::open(process_id)?;
-    let process_path = api::process_image_path(process.raw())?;
-    let process_name = process_name_from_path(&process_path)?;
+    let (process_name, process_id) = process_name_and_id(window)?;
     let window_title = api::window_title(window)?;
 
     Ok(Some(ActiveWindowInfo {
@@ -81,6 +78,26 @@ pub fn get_active_window_info() -> Result<Option<ActiveWindowInfo>, ActiveWindow
         window_title,
         process_id,
     }))
+}
+
+/// 現在の前面ウィンドウを所有するプロセス名だけを取得する。
+///
+/// 継続計測向けのprivacy最小境界であり、window titleは取得しない。
+/// PIDとfull pathはbasenameを解決する間だけ保持し、戻り値には含めない。
+pub fn get_foreground_process_name() -> Result<Option<String>, ActiveWindowError> {
+    let Some(window) = api::foreground_window() else {
+        return Ok(None);
+    };
+
+    process_name_and_id(window).map(|(process_name, _)| Some(process_name))
+}
+
+fn process_name_and_id(window: HWND) -> Result<(String, u32), ActiveWindowError> {
+    let process_id = api::window_process_id(window)?;
+    let process = OwnedProcessHandle::open(process_id)?;
+    let process_path = api::process_image_path(process.raw())?;
+    let process_name = process_name_from_path(&process_path)?;
+    Ok((process_name, process_id))
 }
 
 struct OwnedProcessHandle(HANDLE);
@@ -469,6 +486,33 @@ mod tests {
 
         panic!(
             "foreground window information was unavailable{}",
+            last_error
+                .map(|error| format!(" ({error})"))
+                .unwrap_or_default()
+        );
+    }
+
+    #[test]
+    #[ignore = "requires an interactive Windows desktop"]
+    fn reads_only_foreground_process_name_from_interactive_desktop() {
+        let mut last_error = None;
+
+        for _ in 0..5 {
+            match get_foreground_process_name() {
+                Ok(Some(process_name)) => {
+                    assert!(!process_name.is_empty());
+                    assert!(!process_name.contains(['\\', '/']));
+                    return;
+                }
+                Ok(None) => {}
+                Err(error) => last_error = Some(error),
+            }
+
+            thread::sleep(Duration::from_millis(100));
+        }
+
+        panic!(
+            "foreground process name was unavailable{}",
             last_error
                 .map(|error| format!(" ({error})"))
                 .unwrap_or_default()

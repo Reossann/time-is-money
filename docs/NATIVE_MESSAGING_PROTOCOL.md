@@ -5,7 +5,7 @@
 ## 1. スコープ
 
 - 対象: Chrome Extension (`sendNativeMessage`) と Native Messaging Host 間の通信
-- 対象外: Host から Tauri への内部連携方式、Dashboard 反映ロジック
+- 対象外: Host から Tauri への内部連携方式、タイマー画面の反映ロジック
 
 ## 2. ホスト名とチャネル
 
@@ -30,7 +30,7 @@ Native Messaging の標準仕様に従い、メッセージは次の形式で送
 
 ## 4. 入力メッセージ仕様 (Chrome -> Host)
 
-### 4.1 JSON Schema (logical)
+### 4.1 URL変更
 
 ```json
 {
@@ -40,13 +40,24 @@ Native Messaging の標準仕様に従い、メッセージは次の形式で送
 }
 ```
 
-### 4.2 バリデーション
+### 4.2 計測停止
+
+Chromeが非アクティブになった場合やHTTP/HTTPS以外へ移動した場合に送信する。
+
+```json
+{
+  "type": "TRACKING_STOP",
+  "timestamp": 1704067200000
+}
+```
+
+### 4.3 バリデーション
 
 - `type`
   - 必須、文字列
-  - 現時点で受け付ける値は `URL_CHANGE` のみ
+  - `URL_CHANGE`または`TRACKING_STOP`
 - `url`
-  - 必須、文字列
+  - `URL_CHANGE`では必須、`TRACKING_STOP`では指定しない
   - `http` / `https` のみ許可
   - 受信後に再サニタイズする
     - query を除去
@@ -67,6 +78,8 @@ Native Messaging の標準仕様に従い、メッセージは次の形式で送
   "sanitizedUrl": "https://docs.google.com/document/d/example"
 }
 ```
+
+`TRACKING_STOP`成功時は`sanitizedUrl`を返さない。
 
 ### 5.2 失敗レスポンス
 
