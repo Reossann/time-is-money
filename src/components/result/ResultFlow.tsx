@@ -10,6 +10,7 @@ import { AppBreakdownStep } from "./steps/AppBreakdownStep";
 import { CalendarSaveStep } from "./steps/CalendarSaveStep";
 import { FinalizingStep } from "./steps/FinalizingStep";
 import { HouseEquivalentStep } from "./steps/HouseEquivalentStep";
+import type { HouseEquivalentStepProps } from "./steps/HouseEquivalentStep";
 import { ImprovementStep } from "./steps/ImprovementStep";
 import { LifetimeMoneyStep } from "./steps/LifetimeMoneyStep";
 import { ReturningHomeStep } from "./steps/ReturningHomeStep";
@@ -20,7 +21,8 @@ import {
 import type { ResultStepProps } from "./steps/ResultStepPlaceholder";
 
 type ResultFlowStepProps = ResultStepProps &
-  Pick<SessionMoneyStepProps, "sessionResult" | "onAnimationComplete">;
+  Pick<SessionMoneyStepProps, "sessionResult" | "onAnimationComplete"> &
+  Pick<HouseEquivalentStepProps, "previewEquivalent">;
 
 const STEP_COMPONENTS: Readonly<
   Record<ResultFlowStep, ComponentType<ResultFlowStepProps>>
@@ -39,12 +41,14 @@ export type ResultFlowProps = {
   onExit: () => void;
   sessionResult?: SessionMoneyStepProps["sessionResult"];
   onSessionMoneyAnimationComplete?: SessionMoneyStepProps["onAnimationComplete"];
+  houseEquivalentPreview?: HouseEquivalentStepProps["previewEquivalent"];
 };
 
 export function ResultFlow({
   onExit,
   sessionResult,
   onSessionMoneyAnimationComplete,
+  houseEquivalentPreview,
 }: ResultFlowProps) {
   const status = useResultFlowStore((state) => state.status);
   const mode = useResultFlowStore((state) => state.mode);
@@ -108,6 +112,7 @@ export function ResultFlow({
             animationSkipped={animationSkipped}
             sessionResult={sessionResult}
             onAnimationComplete={reportMoneyAnimationComplete}
+            previewEquivalent={houseEquivalentPreview}
           />
         </div>
         <ResultFlowControls

@@ -6,6 +6,8 @@ import { RESULT_FLOW_STEPS } from "../../constants/resultFlow";
 import { useResultFlowStore } from "../../stores/useResultFlowStore";
 import { RESULT_FLOW_PREVIEW_CONTENT } from "../../test/fixtures/resultFlowPreview";
 import { validSessionResult } from "../../test/fixtures/sessionResult";
+import { calculateHouseEquivalent } from "../../services/houseEquivalentService";
+import { HOUSE_EQUIVALENT_FIXTURES } from "../../test/fixtures/houseEquivalent";
 import { ResultFlow } from "./ResultFlow";
 
 describe("ResultFlow", () => {
@@ -146,6 +148,27 @@ describe("ResultFlow", () => {
       screen.getByText(
         "これは開発用プレビューです。実際の金額・保存結果・設定変更は行いません。",
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the house animation fixture only when preview input is provided", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResultFlow
+        houseEquivalentPreview={calculateHouseEquivalent(
+          HOUSE_EQUIVALENT_FIXTURES.multipleWithProgress,
+        )}
+        onExit={vi.fn()}
+      />,
+    );
+
+    for (let stepIndex = 1; stepIndex < 5; stepIndex += 1) {
+      await user.click(screen.getByRole("button", { name: "次へ" }));
+    }
+
+    expect(screen.getByRole("heading", { name: "家3軒と50%分" })).toBeInTheDocument();
+    expect(
+      screen.getByText("開発用fixtureです。保存済みの累計金額は読み込みません。"),
     ).toBeInTheDocument();
   });
 
