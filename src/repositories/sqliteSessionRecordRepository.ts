@@ -55,6 +55,8 @@ export const SESSION_RECORD_SQL = {
     "SELECT * FROM session_record_apps WHERE session_id = $1 ORDER BY duration_seconds DESC, app_id ASC",
   selectByOwner:
     "SELECT * FROM session_records WHERE owner_id = $1 ORDER BY ended_at DESC, session_id ASC",
+  selectByOwnerInRange:
+    "SELECT * FROM session_records WHERE owner_id = $1 AND ended_at >= $2 AND ended_at < $3 ORDER BY ended_at DESC, session_id ASC LIMIT $4",
   selectByDate:
     "SELECT * FROM session_records WHERE owner_id = $1 AND local_date_key = $2 ORDER BY ended_at DESC, session_id ASC",
   selectByApp: `SELECT sr.* FROM session_records sr
@@ -204,6 +206,24 @@ export class SqliteSessionRecordRepository implements SessionRecordRepository {
       const parents = await db.select<SessionRecordParentRow[]>(
         SESSION_RECORD_SQL.selectByOwner,
         [ownerId],
+      );
+      return await this.hydrateMany(db, parents);
+    } catch (error) {
+      return rethrow(error, "LOAD_FAILED");
+    }
+  }
+
+  async listByOwnerInRange(
+    ownerId: string,
+    fromMs: number,
+    toMs: number,
+    limit: number,
+  ): Promise<readonly SessionRecord[]> {
+    try {
+      const db = await this.provideDatabase();
+      const parents = await db.select<SessionRecordParentRow[]>(
+        SESSION_RECORD_SQL.selectByOwnerInRange,
+        [ownerId, fromMs, toMs, limit],
       );
       return await this.hydrateMany(db, parents);
     } catch (error) {
