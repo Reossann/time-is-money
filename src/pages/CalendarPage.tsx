@@ -14,6 +14,10 @@ const yenFormatter = new Intl.NumberFormat("ja-JP", {
   maximumFractionDigits: 0,
 });
 
+function formatSignedYen(value: number): string {
+  return `${value > 0 ? "+" : ""}${yenFormatter.format(value)}`;
+}
+
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
@@ -47,7 +51,7 @@ function CalendarDay({ day, point, selected, onSelect }: {
           <strong>{formatDuration(point.usageSeconds)}</strong>
           <span className="demo-calendar__earned">+{yenFormatter.format(point.earnedYen)}</span>
           <span className="demo-calendar__wasted">-{yenFormatter.format(point.wastedYen)}</span>
-          <span className="demo-calendar__net">+{yenFormatter.format(point.netYen)}</span>
+          <span className="demo-calendar__net">{formatSignedYen(point.netYen)}</span>
         </span>
       ) : null}
     </button>
@@ -98,7 +102,7 @@ export function CalendarPage() {
           <div><dt>利用時間</dt><dd>{formatDuration(totals.usageSeconds)}</dd></div>
           <div><dt>獲得</dt><dd className="demo-calendar__earned">+{yenFormatter.format(totals.earnedYen)}</dd></div>
           <div><dt>浪費</dt><dd className="demo-calendar__wasted">-{yenFormatter.format(totals.wastedYen)}</dd></div>
-          <div><dt>純増減</dt><dd className="demo-calendar__net">+{yenFormatter.format(totals.netYen)}</dd></div>
+          <div><dt>純増減</dt><dd className="demo-calendar__net">{formatSignedYen(totals.netYen)}</dd></div>
         </dl>
       </section>
 
@@ -130,7 +134,7 @@ export function CalendarPage() {
               <dl>
                 <div><dt>獲得額</dt><dd className="demo-calendar__earned">+{yenFormatter.format(selectedPoint.earnedYen)}</dd></div>
                 <div><dt>浪費額</dt><dd className="demo-calendar__wasted">-{yenFormatter.format(selectedPoint.wastedYen)}</dd></div>
-                <div className="demo-calendar__detail-net"><dt>純増減</dt><dd>+{yenFormatter.format(selectedPoint.netYen)}</dd></div>
+                <div className="demo-calendar__detail-net"><dt>純増減</dt><dd>{formatSignedYen(selectedPoint.netYen)}</dd></div>
               </dl>
             </>
           ) : (
