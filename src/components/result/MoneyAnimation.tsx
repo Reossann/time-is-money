@@ -1,22 +1,50 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { MONEY_ANIMATION_ENTRY_DELAY_MS } from "../../constants/moneyAnimation";
+import { MONEY_ANIMATION_DURATION_MS } from "../../constants/moneyAnimation";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { createMoneyAnimationDisplayModel } from "../../services/moneyAnimationService";
-import type { MoneyAnimationProps } from "../../types/moneyAnimation";
+import type {
+  MoneyAnimationCompleteReason,
+  MoneyAnimationProps,
+} from "../../types/moneyAnimation";
 
-const PARTICLE_DELAY_MILLISECONDS = 55;
+const PARTICLE_DELAY_MILLISECONDS = 10;
 
 export function MoneyAnimation({
   amountYen,
   mode,
   playState,
   runId,
+  onStart,
+  onComplete,
 }: MoneyAnimationProps) {
   const model = createMoneyAnimationDisplayModel({ amountYen, mode });
   const stageRef = useRef<HTMLDivElement>(null);
   const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
-  const animationRequested = playState === "playing" && !model.isZero;
+  const startedRunIds = useRef(new Set<string>());
+  const completedRunIds = useRef(new Set<string>());
+  const onStartRef = useRef(onStart);
+  const onCompleteRef = useRef(onComplete);
+  onStartRef.current = onStart;
+  onCompleteRef.current = onComplete;
+  const prefersReducedMotion = useReducedMotion();
+  const animationRequested =
+    playState === "playing" && !model.isZero && !prefersReducedMotion;
   const isAnimated = animationRequested && hasEnteredViewport;
+
+  const complete = useCallback((reason: MoneyAnimationCompleteReason) => {
+    if (completedRunIds.current.has(runId)) return;
+
+    completedRunIds.current.add(runId);
+    onCompleteRef.current?.(reason);
+  }, [runId]);
 
   useEffect(() => {
     setHasEnteredViewport(false);
@@ -42,11 +70,44 @@ export function MoneyAnimation({
     return () => observer.disconnect();
   }, [animationRequested, runId]);
 
+  useEffect(() => {
+    if (playState === "idle") return;
+
+    if (playState === "skipped") {
+      complete("skipped");
+      return;
+    }
+
+    if (model.isZero) {
+      complete("zero");
+      return;
+    }
+
+    if (prefersReducedMotion) complete("reduced-motion");
+  }, [complete, model.isZero, playState, prefersReducedMotion, runId]);
+
+  useEffect(() => {
+    if (!isAnimated || completedRunIds.current.has(runId)) return;
+
+    if (!startedRunIds.current.has(runId)) {
+      startedRunIds.current.add(runId);
+      onStartRef.current?.();
+    }
+
+    const timer = window.setTimeout(
+      () => complete("finished"),
+      MONEY_ANIMATION_DURATION_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [complete, isAnimated, runId]);
+
   return (
     <section
       className={`money-animation money-animation--${model.mode}${
         model.isZero ? " money-animation--zero" : ""
-      }${isAnimated ? " money-animation--playing" : ""}`}
+      }${isAnimated ? " money-animation--playing" : ""}${
+        prefersReducedMotion ? " money-animation--reduced-motion" : ""
+      }`}
       data-mode={model.mode}
       data-play-state={playState}
       aria-labelledby={`money-animation-${model.mode}-title`}
