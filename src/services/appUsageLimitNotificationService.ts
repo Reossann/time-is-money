@@ -30,9 +30,11 @@ export function evaluateConfiguredAppUsageLimits(
   for (const setting of settings.desktopApps) {
     if (!setting.enabled) continue;
 
-    const dailyPrevious = previous.dailySecondsByAppId[setting.appId] ?? 0;
+    const hasDailyHistory = [...nextKeys].some((value) => value.startsWith(`${setting.appId}:daily:`));
+    const hasContinuousHistory = [...nextKeys].some((value) => value.startsWith(`${setting.appId}:continuous:`));
+    const dailyPrevious = hasDailyHistory ? (previous.dailySecondsByAppId[setting.appId] ?? 0) : 0;
     const dailyCurrent = current.dailySecondsByAppId[setting.appId] ?? 0;
-    const continuousPrevious = previous.activeAppId === setting.appId ? previous.continuousSeconds : 0;
+    const continuousPrevious = hasContinuousHistory && previous.activeAppId === setting.appId ? previous.continuousSeconds : 0;
     const continuousCurrent = current.activeAppId === setting.appId ? current.continuousSeconds : 0;
 
     for (const event of evaluateAppUsageLimitNotifications("daily", setting.dailyLimitSeconds, dailyPrevious, dailyCurrent)) {
@@ -46,6 +48,22 @@ export function evaluateConfiguredAppUsageLimits(
       if (nextKeys.has(eventKey)) continue;
       nextKeys.add(eventKey);
       events.push({ ...event, appId: setting.appId });
+    }
+
+    // 既に制限を超えた状態で監視・ルールが開始された場合も、到達通知を保証する。
+    if (dailyCurrent >= setting.dailyLimitSeconds && !events.some((event) => event.appId === setting.appId && event.kind === "daily")) {
+      const eventKey = key(setting.appId, "daily", "reached");
+      if (!nextKeys.has(eventKey)) {
+        nextKeys.add(eventKey);
+        events.push({ appId: setting.appId, kind: "daily", notification: "reached", limitSeconds: setting.dailyLimitSeconds, usedSeconds: dailyCurrent });
+      }
+    }
+    if (continuousCurrent >= setting.continuousLimitSeconds && !events.some((event) => event.appId === setting.appId && event.kind === "continuous")) {
+      const eventKey = key(setting.appId, "continuous", "reached");
+      if (!nextKeys.has(eventKey)) {
+        nextKeys.add(eventKey);
+        events.push({ appId: setting.appId, kind: "continuous", notification: "reached", limitSeconds: setting.continuousLimitSeconds, usedSeconds: continuousCurrent });
+      }
     }
   }
 

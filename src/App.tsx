@@ -56,7 +56,9 @@ export function App() {
       } else {
         dispose = stop;
       }
-    }).catch(() => undefined);
+    }).catch((error) => {
+      console.error("利用制限監視の開始に失敗しました", error);
+    });
     return () => {
       isDisposed = true;
       dispose?.();

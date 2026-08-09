@@ -34,6 +34,9 @@ export async function processAppUsageLimitObservation(
   const dateChanged = previousState.localDate !== state.localDate;
   let nextDeliveryState = resetAppUsageLimitNotificationDelivery(deliveryState, dateChanged);
   const evaluation = evaluateConfiguredAppUsageLimits(previousState, state, settings);
+  if (evaluation.events.length > 0) {
+    console.info("利用制限監視の通知イベント", evaluation.events.map((event) => ({ appId: event.appId, kind: event.kind, notification: event.notification })));
+  }
   const appNames = new Map(settings.desktopApps.map((setting) => [setting.appId, setting.processName]));
   const nowSeconds = Math.floor(state.lastCapturedAt / 1000);
   let sentCount = 0;
