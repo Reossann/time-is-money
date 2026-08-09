@@ -33,7 +33,12 @@ export async function processAppUsageLimitObservation(
   const state = advanceAppUsageLimitState(previousState, observation);
   const dateChanged = previousState.localDate !== state.localDate;
   let nextDeliveryState = resetAppUsageLimitNotificationDelivery(deliveryState, dateChanged);
-  const evaluation = evaluateConfiguredAppUsageLimits(previousState, state, settings);
+  const evaluation = evaluateConfiguredAppUsageLimits(
+    previousState,
+    state,
+    settings,
+    new Set(Object.keys(nextDeliveryState) as AppUsageLimitNotificationKey[]),
+  );
   if (evaluation.events.length > 0) {
     console.info("利用制限監視の通知イベント", evaluation.events.map((event) => ({ appId: event.appId, kind: event.kind, notification: event.notification })));
   }
@@ -46,9 +51,13 @@ export async function processAppUsageLimitObservation(
     if (setting === undefined) continue;
     const notificationKey = `${event.appId}:${event.kind}:${event.notification}` as AppUsageLimitNotificationKey;
     if (!canDeliverAppUsageLimitNotification(notificationKey, nowSeconds, setting.cooldownSeconds, nextDeliveryState)) continue;
-    await send(appNames.get(event.appId) ?? event.appId, event);
-    nextDeliveryState = recordAppUsageLimitNotificationDelivery(notificationKey, nowSeconds, nextDeliveryState);
-    sentCount += 1;
+    try {
+      await send(appNames.get(event.appId) ?? event.appId, event);
+      nextDeliveryState = recordAppUsageLimitNotificationDelivery(notificationKey, nowSeconds, nextDeliveryState);
+      sentCount += 1;
+    } catch (error) {
+      console.error("利用制限通知の送信に失敗しました", { appId: event.appId, kind: event.kind, notification: event.notification, error });
+    }
   }
 
   return { state, deliveryState: nextDeliveryState, sentCount };

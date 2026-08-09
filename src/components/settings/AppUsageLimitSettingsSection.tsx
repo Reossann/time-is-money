@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { appUsageLimitSettingsRepository } from "../../repositories/appUsageLimitSettingsRepository";
-import { removeAppUsageLimit, upsertAppUsageLimit } from "../../services/appUsageLimitSettingsService";
+import { removeAppUsageLimit, replaceAppUsageLimit, upsertAppUsageLimit } from "../../services/appUsageLimitSettingsService";
 import type { AppUsageLimitSetting, AppUsageLimitSettings } from "../../types/appUsageLimitSettings";
 
 const emptyDraft = { processName: "", dailyLimitMinutes: "60", continuousLimitMinutes: "30", cooldownMinutes: "15" };
@@ -35,7 +35,13 @@ export function AppUsageLimitSettingsSection() {
     }
     const existing = editingAppId === null ? undefined : settings.desktopApps.find((entry) => entry.appId === editingAppId);
     const setting: AppUsageLimitSetting = { appId: existing?.appId ?? "pending", processName: draft.processName, dailyLimitSeconds: daily * 60, continuousLimitSeconds: continuous * 60, cooldownSeconds: cooldown * 60, enabled: existing?.enabled ?? true };
-    try { await save(upsertAppUsageLimit(setting, settings)); resetDraft(); }
+    try {
+      const next = editingAppId === null
+        ? upsertAppUsageLimit(setting, settings)
+        : replaceAppUsageLimit(editingAppId, setting, settings);
+      await save(next);
+      resetDraft();
+    }
     catch { setError("同じアプリのルールがあるか、入力値が不正です。"); }
   };
 

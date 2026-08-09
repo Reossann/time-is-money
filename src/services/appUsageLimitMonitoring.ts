@@ -19,16 +19,16 @@ export async function startAppUsageLimitMonitoring(): Promise<() => void> {
   let settings = await appUsageLimitSettingsRepository.load();
   const runtime = await loadAppUsageLimitRuntime(localDate());
   let state: AppUsageLimitState | null = runtime.state;
-  // 通知履歴は送信結果とOS側の表示状態が一致しない場合があるため、起動時はリセットする。
-  // 日次利用累計（runtime.state）は引き続き復元する。
-  let deliveryState: AppUsageLimitNotificationDeliveryState = {};
+  let deliveryState: AppUsageLimitNotificationDeliveryState = runtime.deliveryState;
   let stopped = false;
+  let polling = false;
   let pollCount = 0;
   let lastLoggedAppId: string | null | undefined;
   console.info("利用制限監視を開始しました", settings.desktopApps.map((setting) => ({ appId: setting.appId, processName: setting.processName, enabled: setting.enabled })));
 
   const poll = async () => {
-    if (stopped) return;
+    if (stopped || polling) return;
+    polling = true;
     try {
       pollCount += 1;
       if (pollCount % SETTINGS_REFRESH_INTERVAL === 0) {
@@ -71,6 +71,8 @@ export async function startAppUsageLimitMonitoring(): Promise<() => void> {
     } catch (error) {
       // A transient foreground-window or notification error must not stop monitoring.
       console.error("利用制限監視の1回分の処理に失敗しました", error);
+    } finally {
+      polling = false;
     }
   };
 
