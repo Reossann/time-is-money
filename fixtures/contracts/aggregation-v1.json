@@ -1,0 +1,60 @@
+{
+  "query": {
+    "ownerId": "local-owner-v1",
+    "granularity": "day",
+    "from": "2026-01-01T00:00:00.000Z",
+    "to": "2026-01-04T00:00:00.000Z",
+    "timeZoneId": "Asia/Tokyo",
+    "includeEmptyPeriods": true
+  },
+  "aggregates": [
+    {
+      "period": {
+        "granularity": "day",
+        "key": "2026-01-01",
+        "startAt": "2025-12-31T15:00:00.000Z",
+        "endAt": "2026-01-01T15:00:00.000Z",
+        "timeZoneId": "Asia/Tokyo"
+      },
+      "sessionCount": 2,
+      "durationSeconds": 1800,
+      "trackedDurationSeconds": 1500,
+      "untrackedDurationSeconds": 300,
+      "earnedYen": 120,
+      "wastedYen": 20,
+      "netYen": 100
+    },
+    {
+      "period": {
+        "granularity": "day",
+        "key": "2026-01-02",
+        "startAt": "2026-01-01T15:00:00.000Z",
+        "endAt": "2026-01-02T15:00:00.000Z",
+        "timeZoneId": "Asia/Tokyo"
+      },
+      "sessionCount": 1,
+      "durationSeconds": 600,
+      "trackedDurationSeconds": 600,
+      "untrackedDurationSeconds": 0,
+      "earnedYen": 0,
+      "wastedYen": 40,
+      "netYen": -40
+    },
+    {
+      "period": {
+        "granularity": "day",
+        "key": "2026-01-03",
+        "startAt": "2026-01-02T15:00:00.000Z",
+        "endAt": "2026-01-03T15:00:00.000Z",
+        "timeZoneId": "Asia/Tokyo"
+      },
+      "sessionCount": 0,
+      "durationSeconds": 0,
+      "trackedDurationSeconds": 0,
+      "untrackedDurationSeconds": 0,
+      "earnedYen": 0,
+      "wastedYen": 0,
+      "netYen": 0
+    }
+  ]
+}
