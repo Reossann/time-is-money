@@ -28,4 +28,11 @@ describe("AggregationClient", () => {
       client.getPeriodAggregates({ ...query, to: to.toISOString() }),
     ).rejects.toMatchObject({ code: "QUERY_LIMIT_EXCEEDED" });
   });
+
+  it("keeps the domain error code when owner context is missing", async () => {
+    const client = createAggregationClient(history);
+    await expect(
+      client.getPeriodAggregates({ ...query, ownerId: "" }),
+    ).rejects.toMatchObject({ code: "OWNER_CONTEXT_REQUIRED" });
+  });
 });

@@ -1,6 +1,5 @@
 import { createSqliteSessionRecordRepository } from "../repositories/sqliteSessionRecordRepository";
 import { AggregationError, type AggregationQuery, type PeriodAggregate } from "../types/aggregation";
-import { aggregationQuerySchema } from "../utils/aggregationSchemas";
 import { aggregateSessionHistory } from "./aggregationService";
 import {
   createSessionHistoryAdapter,
@@ -22,16 +21,17 @@ export function createAggregationClient(
     async getPeriodAggregates(
       input: AggregationQuery,
     ): Promise<readonly PeriodAggregate[]> {
-      let query: AggregationQuery;
-      try {
-        query = aggregationQuerySchema.parse(input);
-      } catch {
-        throw new AggregationError("INVALID_PERIOD_RANGE", "invalid aggregation query");
-      }
-      if (Date.parse(query.to) - Date.parse(query.from) > MAX_AGGREGATION_RANGE_MILLISECONDS) {
+      const fromMilliseconds = Date.parse(input.from);
+      const toMilliseconds = Date.parse(input.to);
+      if (
+        Number.isFinite(fromMilliseconds) &&
+        Number.isFinite(toMilliseconds) &&
+        toMilliseconds - fromMilliseconds > MAX_AGGREGATION_RANGE_MILLISECONDS
+      ) {
         throw new AggregationError("QUERY_LIMIT_EXCEEDED", "aggregation range limit exceeded");
       }
-      return aggregateSessionHistory(query, history);
+      // The domain service owns validation so client callers retain its stable error codes.
+      return aggregateSessionHistory(input, history);
     },
   });
 }
