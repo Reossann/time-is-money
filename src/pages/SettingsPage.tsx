@@ -81,18 +81,25 @@ export function SettingsPage() {
   return (
     <main className="page">
       <h2>設定</h2>
-      <section>
+      <section className="settings-section">
         <h3>一般</h3>
-        <label>
+        <label className="settings-toggle">
+          <span className="settings-toggle__label">
+            {autostartLoading
+              ? '処理中...'
+              : 'PCの起動時にアプリを自動で開く'}
+          </span>
+          <span className="settings-toggle__control">
           <input
             type="checkbox"
             checked={autostartEnabled}
             onChange={(event) => handleAutostartToggle(event.target.checked)}
             disabled={autostartLoading}
           />
-          {autostartLoading
-            ? '処理中...'
-            : 'PCの起動時にアプリを自動で開く'}
+            <span className="settings-toggle__track" aria-hidden="true">
+              <span className="settings-toggle__thumb" />
+            </span>
+          </span>
         </label>
         {autostartErrorMessage && (
           <p role="alert">{autostartErrorMessage}</p>
@@ -102,7 +109,7 @@ export function SettingsPage() {
       <HourlyRateSettingsSection />
       <AppCategorySettingsSection />
 
-      <section>
+      <section className="settings-section">
         <h3>通知設定</h3>
         <p>通知の口調と頻度を選択できます。選択した内容は自動で保存されます。</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
@@ -120,8 +127,8 @@ export function SettingsPage() {
                       padding: '8px 12px',
                       borderRadius: '999px',
                       border: '1px solid #888',
-                      backgroundColor: isActive ? '#f0c419' : '#fff',
-                      color: isActive ? '#292b2f' : '#111',
+                      backgroundColor: isActive ? '#b88600' : '#fff',
+                      color: isActive ? '#fff' : '#111',
                       cursor: 'pointer',
                     }}
                   >
@@ -146,8 +153,8 @@ export function SettingsPage() {
                       padding: '8px 12px',
                       borderRadius: '999px',
                       border: '1px solid #888',
-                      backgroundColor: isActive ? '#f0c419' : '#fff',
-                      color: isActive ? '#292b2f' : '#111',
+                      backgroundColor: isActive ? '#b88600' : '#fff',
+                      color: isActive ? '#fff' : '#111',
                       cursor: 'pointer',
                     }}
                   >
@@ -161,7 +168,7 @@ export function SettingsPage() {
         {settingsErrorMessage && <p role="alert">{settingsErrorMessage}</p>}
       </section>
 
-      <section>
+      <section className="settings-section">
         <h3>Web Tracker</h3>
         <p>Chromeで起動しているウェブアプリの利用時間を計測し、タイマー画面に表示します。</p>
         <details>

@@ -60,7 +60,7 @@ describe("TimerPage", () => {
     render(<TimerPage />);
 
     expect(screen.getAllByText("Google Docs")).toHaveLength(1);
-    expect(screen.getByText("00:00:08")).toBeInTheDocument();
+    expect(screen.getByText("8秒")).toBeInTheDocument();
     expect(screen.getByText("接続済み")).toBeInTheDocument();
   });
 

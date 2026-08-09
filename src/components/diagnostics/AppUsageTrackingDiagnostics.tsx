@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Monitor } from "lucide-react";
 
 import {
   refreshAppUsageTrackingSnapshot,
@@ -14,6 +15,16 @@ const statusLabels = {
   "start-failed": "開始失敗",
   "stop-failed": "停止失敗",
 } as const;
+
+function formatDuration(seconds: number): string {
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(wholeSeconds / 60);
+  const remainingSeconds = wholeSeconds % 60;
+
+  return minutes > 0
+    ? `${minutes}分${remainingSeconds}秒`
+    : `${remainingSeconds}秒`;
+}
 
 export function AppUsageTrackingDiagnostics() {
   const { status, snapshot, errorCode } = useMeasurementTrackingState();
@@ -44,11 +55,11 @@ export function AppUsageTrackingDiagnostics() {
         </div>
         <div>
           <dt>追跡済み</dt>
-          <dd>{snapshot?.trackedDurationSeconds ?? 0}秒</dd>
+          <dd>{formatDuration(snapshot?.trackedDurationSeconds ?? 0)}</dd>
         </div>
         <div>
           <dt>未追跡</dt>
-          <dd>{snapshot?.untrackedDurationSeconds ?? 0}秒</dd>
+          <dd>{formatDuration(snapshot?.untrackedDurationSeconds ?? 0)}</dd>
         </div>
       </dl>
 
@@ -62,8 +73,11 @@ export function AppUsageTrackingDiagnostics() {
         <ul className="app-usage-diagnostics__apps">
           {snapshot.apps.map((app) => (
             <li key={app.appId}>
-              <span>{app.processName}</span>
-              <strong>{app.durationSeconds}秒</strong>
+              <span className="app-usage-diagnostics__app-name">
+                <Monitor size={18} aria-hidden="true" />
+                <span>{app.processName}</span>
+              </span>
+              <strong>{formatDuration(app.durationSeconds)}</strong>
             </li>
           ))}
         </ul>

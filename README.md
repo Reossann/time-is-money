@@ -4,7 +4,7 @@ Windows向けのデスクトップアプリとして、PC作業中に使った�
 
 現在は、4画面のUI、アプリ起動からの経過時間表示、自動起動設定、通知の動作確認、システムトレイ、前面Windowsアプリ別の利用時間計測、Chrome拡張機能とのNative Messaging連携まで実装済みです。
 
-タイマーsessionの開始と同時にRustの常駐workerが前面process名だけを継続観測し、アプリ別の利用時間snapshotを返します。開発時はタイマー画面のdiagnosticsで確認できますが、結果UI・金額換算・履歴保存にはまだ接続していません。
+タイマーsessionの開始と同時にRustの常駐workerが前面process名だけを継続観測し、アプリ別の利用時間snapshotを返します。停止時には金額・分類を含む`SessionResult`を確定し、SQLiteへ保存できます。日別・週別・月別の集計基盤と、カレンダー・グラフ向けの共通adapterも利用できますが、恒久的な結果・カレンダー画面への接続は後続Issueで行います。
 
 ## 現在入っているもの
 
@@ -20,17 +20,25 @@ Windows向けのデスクトップアプリとして、PC作業中に使った�
 - Rust常駐workerによる前面Windowsアプリの1秒samplingと、timer session単位の利用時間集計
 - session ID / startedAt / endedAtを共有するstart・snapshot・stop Commandと、Zod検証済みの公開snapshot
 - 開発時だけ表示するアプリ別利用時間diagnostics。トレイへ隠した後も計測は継続
+- 停止済み`SessionResult`のSQLite保存、owner分離、再試行、session IDによる重複保存防止
+- owner・期間・IANA timezoneを指定する日別・週別・月別集計API。カレンダー・グラフ用adapter
 - Chrome拡張機能、Native Messaging Host、Tauriを通したChromeのサイト（ドメイン）別利用時間計測
 - 仕様書: [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)
+
+## セッション結果のお金演出
+
+- セッション停止時に確定した`SessionResult.totals`の獲得額・浪費額を、そのまま結果フローで表示します。演出側で金額の再計算・再丸めはしません。
+- 獲得と浪費は別の文言・色・動きで表示します。正確な整数JPY金額は常にテキストで読めます。
+- コインなどの粒子は金額そのものではなく装飾です。0円では表示せず、金額が大きくても1つの演出あたり最大12個に制限します。
+- 「この演出をスキップ」とOSの動きを減らす設定では、動かさずに最終状態と金額を表示します。
+- 演出の完了通知は結果フローへ渡しますが、次へ進む・戻る・全体スキップ・保存は結果フロー側が制御します。
 
 ## 未実装のもの
 
 - ウィンドウ切り替えの検知と活動レコードの作成
-- SQLite への保存
-- 分類ルールの作成・適用
-- カレンダーへの活動履歴表示
+- 結果画面、カレンダーへの活動履歴表示、グラフへの実データ接続
 - 実際の利用時間・設定値に基づく通知
-- 金額換算、グラフ、日別・週別・月別集計
+- 累計・同期、アカウント認証
 
 ## アプリ別利用時間計測の範囲
 
@@ -143,7 +151,19 @@ Rustの単体テストは対象モジュール内へ`#[cfg(test)] mod tests`と�
 
 開発時だけタイマーページに結果診断パネルが表示されます。停止・再試行と、アプリ名、時間、分類、時給、金額を確認できます。本番buildにはこの入口を含めません。window title、URL、PID、full path、raw errorは結果・診断・ログへ出しません。
 
-未実装: 結果画面、SQLite保存、累計・同期。本番の停止ボタンや結果表示は別Issueで接続します。
+未実装: 本番の停止ボタンからの結果フロー起動、カレンダー画面への活動履歴表示、同期。結果フローの家換算stepは、`ready`状態で起動された場合にowner別の保存済み累計を読み込みます。開発プレビューはDBを読まず、固定の結果値を表示しません。
+
+### 家換算（Issue #34）
+
+保存済みセッションの獲得額を3,000万円で1軒として換算します。完成した家は表示上3軒までに抑え、残りは件数で示します。建設中の家は基礎・骨組み・壁・屋根・仕上げの段階で表示します。浪費額は完成した家を減らさず、参考値として別に表示します。
+
+## 期間集計（version 1）
+
+日別・週別・月別の集計は、計測中のstateではなくSQLiteへ保存済みの`SessionRecord`を唯一の入力にします。`ownerId`、UTCの`[from, to)`、`day / week / month`、IANA timezoneを指定し、`endedAt`が属する現地暦期間へ一度だけ計上します。週は月曜開始のISO週、月は指定timezoneの暦月です。DSTの日もUTC境界を明示して計算します。
+
+集計結果にはsession数、合計時間、tracked / untracked時間、保存済みの獲得額・浪費額・純増減を含みます。金額を再計算しません。空期間は`includeEmptyPeriods`で0埋めできます。取得は最大366日・10,000件に制限され、owner、SQL、window title、URL、PID、full path、raw errorを画面用payloadやログへ出しません。
+
+`aggregationClient`、`usePeriodAggregates`、calendar summary、グラフの`GraphDataSource` adapterを用意しています。カレンダーの月移動、グラフの画面接続・描画、アカウント同期は別Issueの責務です。
 
 ## Release
 

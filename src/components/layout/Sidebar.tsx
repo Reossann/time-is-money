@@ -3,6 +3,7 @@ import {
   type NavigationId,
 } from "../../constants/navigation";
 import { Clock, Calendar, BarChart, Settings } from "lucide-react";
+import appIcon from "../../../app-icon.png";
 
 type SidebarProps = {
   currentPage: NavigationId;
@@ -19,7 +20,10 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   return (
     <aside className="sidebar" aria-label="画面ナビゲーション">
       <div className="sidebar__brand">
-        <h1 className="sidebar__title">Time Is Money</h1>
+        <div className="sidebar__brand-heading">
+          <img className="sidebar__brand-icon" src={appIcon} alt="" />
+          <h1 className="sidebar__title">Time Is Money</h1>
+        </div>
         <p className="sidebar__description">利用時間の見える化</p>
       </div>
 

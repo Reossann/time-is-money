@@ -35,6 +35,13 @@ export interface SessionRecordRepository {
   /** Owner-scoped lookup for every session that used a given app. */
   listByApp(ownerId: string, appId: string): Promise<readonly SessionRecord[]>;
   listByOwner(ownerId: string): Promise<readonly SessionRecord[]>;
+  /** Owner-scoped, end-boundary range lookup with an explicit result limit. */
+  listByOwnerInRange(
+    ownerId: string,
+    fromMs: number,
+    toMs: number,
+    limit: number,
+  ): Promise<readonly SessionRecord[]>;
   /** Removes a record. The ownerId must match the stored owner. */
   remove(sessionId: string, ownerId: string): Promise<void>;
 }
@@ -133,6 +140,19 @@ export class InMemorySessionRecordRepository
 
   listByOwner(ownerId: string): Promise<readonly SessionRecord[]> {
     return Promise.resolve(this.sortedOwnerRecords(ownerId));
+  }
+
+  listByOwnerInRange(
+    ownerId: string,
+    fromMs: number,
+    toMs: number,
+    limit: number,
+  ): Promise<readonly SessionRecord[]> {
+    return Promise.resolve(
+      this.sortedOwnerRecords(ownerId)
+        .filter((record) => record.endedAt >= fromMs && record.endedAt < toMs)
+        .slice(0, limit),
+    );
   }
 
   remove(sessionId: string, ownerId: string): Promise<void> {

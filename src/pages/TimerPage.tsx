@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useActivityStore } from "../stores/useActivityStore";
 import { useWebAppStore } from "../stores/useWebAppStore";
 import { formatTime } from "../services/activityService";
-import { formatSessionDuration } from "../services/webAppService";
 import { AppUsageTrackingDiagnostics } from "../components/diagnostics/AppUsageTrackingDiagnostics";
 import { SessionFinalizationDiagnostics } from "../components/diagnostics/SessionFinalizationDiagnostics";
 
@@ -13,6 +12,23 @@ type TimerPageProps = {
 
 function getActiveSessionSeconds(startedAt: number, now: number): number {
   return Math.max(0, Math.floor((now - startedAt) / 1000));
+}
+
+function formatJapaneseDuration(seconds: number): string {
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor((wholeSeconds % 3600) / 60);
+  const remainingSeconds = wholeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}時間${minutes > 0 ? `${minutes}分` : ""}${remainingSeconds}秒`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}分${remainingSeconds}秒`;
+  }
+
+  return `${remainingSeconds}秒`;
 }
 
 export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
@@ -68,7 +84,10 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
       <section className="timer-section">
         <h3>PCを開いている時間</h3>
         <div className="timer-display">{formattedTime}</div>
-        <p>計測状況: 計測中 ▶</p>
+        <p className="timer-status-line">
+          計測状況: <span className="timer-status">計測中</span>{" "}
+          <span aria-hidden="true">▶</span>
+        </p>
         <p>アプリを開いてからの利用時間を表示しています。</p>
       </section>
 
@@ -88,7 +107,15 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
         {!Array.isArray(usageStats) || usageStats.length === 0 ? (
           <p>Chromeサイトの使用が検出されていません。</p>
         ) : (
-          <ul className="webapp-list">
+          <table className="webapp-table">
+            <thead>
+              <tr>
+                <th scope="col">サイト</th>
+                <th scope="col">利用時間</th>
+                <th scope="col">セッション数</th>
+              </tr>
+            </thead>
+            <tbody>
             {usageStats.map((stat) => {
               const displayedSeconds =
                 stat.cumulativeSeconds +
@@ -97,18 +124,17 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
                   : 0);
 
               return (
-                <li key={stat.webAppId} className="webapp-item">
-                  <div className="webapp-name">{stat.webAppName}</div>
-                  <div className="webapp-duration">
-                    {formatSessionDuration(displayedSeconds)}
-                  </div>
-                  <div className="webapp-session-count">
-                    セッション数: {stat.sessionCount}
-                  </div>
-                </li>
+                <tr key={stat.webAppId}>
+                  <th scope="row" className="webapp-name">{stat.webAppName}</th>
+                  <td className="webapp-duration">
+                    {formatJapaneseDuration(displayedSeconds)}
+                  </td>
+                  <td className="webapp-session-count">{stat.sessionCount}回</td>
+                </tr>
               );
             })}
-          </ul>
+            </tbody>
+          </table>
         )}
       </section>
 
@@ -118,7 +144,7 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
       {import.meta.env.DEV && onPreviewResultFlow ? (
         <section className="result-preview-entry" aria-label="開発用機能">
           <p className="result-preview-entry__label">Development only</p>
-          <h3>結果フローの骨組み</h3>
+          <h3>結果フロー</h3>
           <p>
             実データを使わず、タイマー停止後の8段階と操作だけを確認します。
           </p>
