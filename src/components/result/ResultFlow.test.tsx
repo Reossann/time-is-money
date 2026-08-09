@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RESULT_FLOW_STEPS } from "../../constants/resultFlow";
 import { useResultFlowStore } from "../../stores/useResultFlowStore";
 import { RESULT_FLOW_PREVIEW_CONTENT } from "../../test/fixtures/resultFlowPreview";
+import { validSessionResult } from "../../test/fixtures/sessionResult";
 import { ResultFlow } from "./ResultFlow";
 
 describe("ResultFlow", () => {
@@ -146,5 +147,41 @@ describe("ResultFlow", () => {
         "これは開発用プレビューです。実際の金額・保存結果・設定変更は行いません。",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("passes finalized money through without controlling flow or duplicating revisits", () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    const sessionResult = {
+      ...validSessionResult,
+      totals: { earnedYen: 10_000, wastedYen: 1_234, netYen: 8_766 },
+    };
+
+    act(() => {
+      useResultFlowStore.getState().next();
+      useResultFlowStore.getState().next();
+    });
+    render(
+      <ResultFlow
+        onExit={vi.fn()}
+        sessionResult={sessionResult}
+        onSessionMoneyAnimationComplete={onComplete}
+      />,
+    );
+
+    expect(screen.getByText("10,000円")).toBeInTheDocument();
+    expect(screen.getByText("1,234円")).toBeInTheDocument();
+    expect(screen.getByText("+8,766円")).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(900));
+    expect(onComplete).toHaveBeenCalledTimes(2);
+    expect(useResultFlowStore.getState().currentStep).toBe("session-money");
+
+    act(() => {
+      useResultFlowStore.getState().previous();
+      useResultFlowStore.getState().next();
+      vi.advanceTimersByTime(900);
+    });
+    expect(onComplete).toHaveBeenCalledTimes(2);
   });
 });

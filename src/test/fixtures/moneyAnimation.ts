@@ -19,3 +19,9 @@ export const MONEY_ANIMATION_FIXTURES: readonly MoneyAnimationFixture[] = [
     mode: "earned",
   },
 ];
+
+export const MONEY_ANIMATION_PREVIEW_FIXTURES = [
+  { id: "preview-earned", amountYen: 10_000, mode: "earned" },
+  { id: "preview-wasted", amountYen: 1_234, mode: "wasted" },
+  { id: "preview-zero", amountYen: 0, mode: "earned" },
+] as const satisfies readonly MoneyAnimationFixture[];

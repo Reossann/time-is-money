@@ -1397,6 +1397,11 @@ button {
   width: 100%;
 }
 
+.session-money-step__net {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
 @keyframes money-animation-earned-coin {
   from { opacity: 0; transform: translateY(-96px) scale(0.55) rotate(-20deg); }
   to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
