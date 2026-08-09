@@ -12,15 +12,17 @@ import {
   ownerIdentityService,
   type OwnerIdentityService,
 } from "../../../services/ownerIdentityService";
+import type { HouseEquivalent } from "../../../types/houseEquivalent";
 import {
   ResultStepPlaceholder,
   type ResultStepProps,
 } from "./ResultStepPlaceholder";
 
-type HouseEquivalentStepProps = ResultStepProps &
+export type HouseEquivalentStepProps = ResultStepProps &
   Readonly<{
     lifetimeSummary?: Pick<LifetimeMoneySummaryService, "getSummary">;
     ownerIdentity?: Pick<OwnerIdentityService, "getCurrentOwnerId">;
+    previewEquivalent?: HouseEquivalent;
   }>;
 
 type ConnectedHouseEquivalentState =
@@ -131,7 +133,42 @@ function HouseEquivalentConnectedStep({
   );
 }
 
+function HouseEquivalentPreviewStep({
+  animationSkipped,
+  content,
+  previewEquivalent,
+}: HouseEquivalentStepProps & Readonly<{ previewEquivalent: HouseEquivalent }>) {
+  return (
+    <section className="result-step" aria-labelledby="result-step-house-equivalent">
+      <h1
+        id="result-step-house-equivalent"
+        className="result-step__title"
+        tabIndex={-1}
+      >
+        {content.title}
+      </h1>
+      <p className="result-step__description">{content.description}</p>
+      <p className="result-step__notice">
+        開発用fixtureです。保存済みの累計金額は読み込みません。
+      </p>
+      <HouseEquivalentAnimation
+        animationSkipped={animationSkipped}
+        equivalent={previewEquivalent}
+      />
+    </section>
+  );
+}
+
 export function HouseEquivalentStep(props: HouseEquivalentStepProps) {
+  if (props.previewEquivalent) {
+    return (
+      <HouseEquivalentPreviewStep
+        {...props}
+        previewEquivalent={props.previewEquivalent}
+      />
+    );
+  }
+
   if (props.status !== "ready") {
     return <ResultStepPlaceholder step="house-equivalent" {...props} />;
   }
