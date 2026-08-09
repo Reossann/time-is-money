@@ -13,7 +13,9 @@ import type {
  * TEMP: グラフの見た目を確認するための開発用データ。
  * #7/#12/#13接続時に、このファイルとGraphPageのdemo分岐を削除する。
  */
-const DEMO_POINTS: Readonly<Record<GraphPeriod, ReadonlyArray<GraphPoint>>> = {
+export const DEMO_GRAPH_POINTS: Readonly<
+  Record<GraphPeriod, ReadonlyArray<GraphPoint>>
+> = {
   day: [
     { dateKey: "2026-08-03", label: "8/3", usageSeconds: 7_200, earnedYen: 6_000, wastedYen: 500, netYen: 5_500 },
     { dateKey: "2026-08-04", label: "8/4", usageSeconds: 10_800, earnedYen: 8_000, wastedYen: 2_000, netYen: 6_000 },
@@ -44,7 +46,7 @@ export const demoGraphQueryService: GraphQueryService = {
     return {
       period,
       metric,
-      points: DEMO_POINTS[period],
+      points: DEMO_GRAPH_POINTS[period],
     };
   },
 };

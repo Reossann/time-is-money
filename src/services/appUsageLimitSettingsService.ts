@@ -28,6 +28,21 @@ export function upsertAppUsageLimit(setting: AppUsageLimitSetting, settings: App
   return freezeSettings({ ...parsed, desktopApps });
 }
 
+export function replaceAppUsageLimit(
+  previousAppId: string,
+  setting: AppUsageLimitSetting,
+  settings: AppUsageLimitSettings,
+): AppUsageLimitSettings {
+  const parsed = appUsageLimitSettingsSchema.parse(settings);
+  const normalizedProcessName = normalizeDesktopProcessName(setting.processName);
+  const canonical = { ...setting, processName: normalizedProcessName, appId: createNormalizedDesktopAppId(normalizedProcessName) };
+  const remainingApps = parsed.desktopApps.filter((entry) => entry.appId !== previousAppId);
+  if (remainingApps.some((entry) => entry.appId === canonical.appId)) {
+    throw new Error("An app usage limit already exists for this process name.");
+  }
+  return freezeSettings({ ...parsed, desktopApps: [...remainingApps, canonical] });
+}
+
 export function removeAppUsageLimit(processName: string, settings: AppUsageLimitSettings): AppUsageLimitSettings {
   const appId = createNormalizedDesktopAppId(processName);
   const parsed = appUsageLimitSettingsSchema.parse(settings);

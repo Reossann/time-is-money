@@ -30,11 +30,9 @@ export function evaluateConfiguredAppUsageLimits(
   for (const setting of settings.desktopApps) {
     if (!setting.enabled) continue;
 
-    const hasDailyHistory = [...nextKeys].some((value) => value.startsWith(`${setting.appId}:daily:`));
-    const hasContinuousHistory = [...nextKeys].some((value) => value.startsWith(`${setting.appId}:continuous:`));
-    const dailyPrevious = hasDailyHistory ? (previous.dailySecondsByAppId[setting.appId] ?? 0) : 0;
+    const dailyPrevious = previous.dailySecondsByAppId[setting.appId] ?? 0;
     const dailyCurrent = current.dailySecondsByAppId[setting.appId] ?? 0;
-    const continuousPrevious = hasContinuousHistory && previous.activeAppId === setting.appId ? previous.continuousSeconds : 0;
+    const continuousPrevious = previous.activeAppId === setting.appId ? previous.continuousSeconds : 0;
     const continuousCurrent = current.activeAppId === setting.appId ? current.continuousSeconds : 0;
 
     for (const event of evaluateAppUsageLimitNotifications("daily", setting.dailyLimitSeconds, dailyPrevious, dailyCurrent)) {
