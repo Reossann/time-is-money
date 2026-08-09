@@ -31,6 +31,14 @@ function createPlaceholderStatuses(): ResultStepStatuses {
   ) as ResultStepStatuses;
 }
 
+function createLiveStatuses(): ResultStepStatuses {
+  return {
+    ...createPlaceholderStatuses(),
+    "house-equivalent": "ready",
+    "calendar-save": "ready",
+  };
+}
+
 function createIdleState() {
   return {
     status: "idle" as const,
@@ -50,7 +58,8 @@ export const useResultFlowStore = create<ResultFlowState>((set, get) => ({
       mode,
       currentStep: RESULT_FLOW_STEPS[0],
       transitionDirection: "initial",
-      stepStatuses: createPlaceholderStatuses(),
+      stepStatuses:
+        mode === "live" ? createLiveStatuses() : createPlaceholderStatuses(),
       skippedAnimations: [],
     });
   },

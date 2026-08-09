@@ -2,6 +2,7 @@ type ResultFlowControlsProps = {
   canPrevious: boolean;
   isLastStep: boolean;
   animationSkipped: boolean;
+  isSkippingAll: boolean;
   onPrevious: () => void;
   onNext: () => void;
   onSkipAnimation: () => void;
@@ -12,6 +13,7 @@ export function ResultFlowControls({
   canPrevious,
   isLastStep,
   animationSkipped,
+  isSkippingAll,
   onPrevious,
   onNext,
   onSkipAnimation,
@@ -49,10 +51,11 @@ export function ResultFlowControls({
       </button>
       <button
         type="button"
-        className="result-flow-button result-flow-button--quiet"
-        onClick={(event) => runSingleClick(event, onSkipAll)}
-      >
-        結果演出をすべてスキップ
+      className="result-flow-button result-flow-button--quiet"
+      onClick={(event) => runSingleClick(event, onSkipAll)}
+      disabled={isSkippingAll}
+    >
+        {isSkippingAll ? "保存して終了中" : "結果演出をすべてスキップ"}
       </button>
       <button
         type="button"

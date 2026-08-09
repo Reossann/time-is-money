@@ -21,6 +21,19 @@ describe("useResultFlowStore", () => {
     );
   });
 
+  it("marks only the connected steps ready in live mode", () => {
+    useResultFlowStore.getState().start("live");
+
+    const state = useResultFlowStore.getState();
+    expect(state.mode).toBe("live");
+    expect(state.stepStatuses).toMatchObject({
+      "calendar-save": "ready",
+      "house-equivalent": "ready",
+    });
+    expect(state.stepStatuses.finalizing).toBe("placeholder");
+    expect(state.stepStatuses["session-money"]).toBe("placeholder");
+  });
+
   it("moves through all steps without passing either boundary", () => {
     useResultFlowStore.getState().start("preview");
     useResultFlowStore.getState().previous();
