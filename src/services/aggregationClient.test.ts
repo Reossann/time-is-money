@@ -35,4 +35,16 @@ describe("AggregationClient", () => {
       client.getPeriodAggregates({ ...query, ownerId: "" }),
     ).rejects.toMatchObject({ code: "OWNER_CONTEXT_REQUIRED" });
   });
+
+  it("exposes the owner-scoped lifetime summary without applying the period limit", async () => {
+    const client = createAggregationClient(history);
+
+    await expect(client.getLifetimeMoneySummary("owner")).resolves.toEqual({
+      ownerId: "owner",
+      sessionCount: 0,
+      earnedYen: 0,
+      wastedYen: 0,
+      netYen: 0,
+    });
+  });
 });

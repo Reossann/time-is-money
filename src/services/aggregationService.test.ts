@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { SessionHistoryAdapter } from "./sessionHistoryAdapter";
-import { aggregateSessionHistory } from "./aggregationService";
+import {
+  aggregateLifetimeMoneySummary,
+  aggregateSessionHistory,
+} from "./aggregationService";
 import { buildSessionRecord } from "./sessionRecordService";
 import { AggregationError } from "../types/aggregation";
 
@@ -110,5 +113,53 @@ describe("aggregateSessionHistory", () => {
     await expect(aggregateSessionHistory(query, limitedHistory)).rejects.toMatchObject({
       code: "QUERY_LIMIT_EXCEEDED",
     });
+  });
+});
+
+describe("aggregateLifetimeMoneySummary", () => {
+  it("sums all canonical records for one owner without a period-range limit", async () => {
+    const first = record("session-1", "owner-a", Date.parse("2020-01-01T00:00:00.000Z"), 7, 0);
+    const second = record("session-2", "owner-a", Date.parse("2026-01-01T00:00:00.000Z"), 0, 3);
+    const otherOwner = record("session-3", "owner-b", Date.parse("2026-01-01T00:00:00.000Z"), 999, 0);
+
+    await expect(
+      aggregateLifetimeMoneySummary("owner-a", history([first, first, second, otherOwner])),
+    ).resolves.toEqual({
+      ownerId: "owner-a",
+      sessionCount: 2,
+      earnedYen: 7,
+      wastedYen: 3,
+      netYen: 4,
+    });
+  });
+
+  it("returns a zero summary when the owner has no saved records", async () => {
+    await expect(aggregateLifetimeMoneySummary("owner-a", history([]))).resolves.toEqual({
+      ownerId: "owner-a",
+      sessionCount: 0,
+      earnedYen: 0,
+      wastedYen: 0,
+      netYen: 0,
+    });
+  });
+
+  it("normalizes surrounding whitespace in the owner context", async () => {
+    const saved = record("session-1", "owner-a", Date.parse("2026-01-01T00:00:00.000Z"), 5, 0);
+
+    await expect(
+      aggregateLifetimeMoneySummary("  owner-a  ", history([saved])),
+    ).resolves.toMatchObject({ ownerId: "owner-a", earnedYen: 5 });
+  });
+
+  it("keeps owner and history failures inside the aggregation error contract", async () => {
+    await expect(aggregateLifetimeMoneySummary("", history([]))).rejects.toMatchObject({
+      code: "OWNER_CONTEXT_REQUIRED",
+    });
+    const failingHistory: SessionHistoryAdapter = {
+      listByOwnerAndRange: async () => Promise.reject(new Error("database details")),
+    };
+    await expect(
+      aggregateLifetimeMoneySummary("owner-a", failingHistory),
+    ).rejects.toMatchObject({ code: "HISTORY_QUERY_FAILED" });
   });
 });

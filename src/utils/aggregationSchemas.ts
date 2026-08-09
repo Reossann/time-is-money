@@ -3,6 +3,7 @@ import { z } from "zod";
 import type {
   AggregationGranularity,
   AggregationQuery,
+  LifetimeMoneySummary,
   PeriodAggregate,
 } from "../types/aggregation";
 import { nonnegativeSafeIntegerSchema } from "./appUsageTrackingSchemas";
@@ -117,3 +118,22 @@ export const periodAggregateSchema = z
       });
     }
   }) satisfies z.ZodType<PeriodAggregate>;
+
+export const lifetimeMoneySummarySchema = z
+  .object({
+    ownerId: z.string().trim().min(1),
+    sessionCount: nonnegativeSafeIntegerSchema,
+    earnedYen: nonnegativeSafeIntegerSchema,
+    wastedYen: nonnegativeSafeIntegerSchema,
+    netYen: z.number().int().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER),
+  })
+  .strict()
+  .superRefine((summary, context) => {
+    if (summary.netYen !== summary.earnedYen - summary.wastedYen) {
+      context.addIssue({
+        code: "custom",
+        message: "netYen must equal earnedYen minus wastedYen",
+        path: ["netYen"],
+      });
+    }
+  }) satisfies z.ZodType<LifetimeMoneySummary>;

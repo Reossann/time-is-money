@@ -34,6 +34,15 @@ export type PeriodAggregate = Readonly<{
   netYen: number;
 }>;
 
+/** Owner-scoped totals across every persisted session record. */
+export type LifetimeMoneySummary = Readonly<{
+  ownerId: string;
+  sessionCount: number;
+  earnedYen: number;
+  wastedYen: number;
+  netYen: number;
+}>;
+
 export type AggregationErrorCode =
   | "OWNER_CONTEXT_REQUIRED"
   | "INVALID_PERIOD_RANGE"

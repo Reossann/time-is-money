@@ -1,6 +1,14 @@
 import { createSqliteSessionRecordRepository } from "../repositories/sqliteSessionRecordRepository";
-import { AggregationError, type AggregationQuery, type PeriodAggregate } from "../types/aggregation";
-import { aggregateSessionHistory } from "./aggregationService";
+import {
+  AggregationError,
+  type AggregationQuery,
+  type LifetimeMoneySummary,
+  type PeriodAggregate,
+} from "../types/aggregation";
+import {
+  aggregateLifetimeMoneySummary,
+  aggregateSessionHistory,
+} from "./aggregationService";
 import {
   createSessionHistoryAdapter,
   type SessionHistoryAdapter,
@@ -12,11 +20,16 @@ export interface AggregationClient {
   getPeriodAggregates(input: AggregationQuery): Promise<readonly PeriodAggregate[]>;
 }
 
+/** Optional consumer contract for screens that need totals beyond one period range. */
+export interface LifetimeAggregationClient {
+  getLifetimeMoneySummary(ownerId: string): Promise<LifetimeMoneySummary>;
+}
+
 export function createAggregationClient(
   history: SessionHistoryAdapter = createSessionHistoryAdapter(
     createSqliteSessionRecordRepository(),
   ),
-): AggregationClient {
+): AggregationClient & LifetimeAggregationClient {
   return Object.freeze({
     async getPeriodAggregates(
       input: AggregationQuery,
@@ -32,6 +45,9 @@ export function createAggregationClient(
       }
       // The domain service owns validation so client callers retain its stable error codes.
       return aggregateSessionHistory(input, history);
+    },
+    getLifetimeMoneySummary(ownerId: string): Promise<LifetimeMoneySummary> {
+      return aggregateLifetimeMoneySummary(ownerId, history);
     },
   });
 }

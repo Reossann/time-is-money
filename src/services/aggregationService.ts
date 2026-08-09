@@ -2,6 +2,7 @@ import type { SessionRecord } from "../types/sessionRecord";
 import {
   AggregationError,
   type AggregationQuery,
+  type LifetimeMoneySummary,
   type PeriodAggregate,
 } from "../types/aggregation";
 import {
@@ -37,6 +38,14 @@ function parseQuery(input: AggregationQuery): AggregationQuery {
   } catch {
     return fail("INVALID_PERIOD_RANGE");
   }
+}
+
+function parseOwnerId(ownerId: string): string {
+  if (typeof ownerId !== "string" || ownerId.trim().length === 0) {
+    return fail("OWNER_CONTEXT_REQUIRED");
+  }
+
+  return ownerId.trim();
 }
 
 function safeAdd(current: number, value: number): number {
@@ -138,4 +147,45 @@ export async function aggregateSessionHistory(
       .map((bucket) => toPeriodAggregate(bucket, totalsByKey.get(bucket.key) ?? emptyAggregate()))
       .filter((aggregate) => query.includeEmptyPeriods === true || aggregate.sessionCount > 0),
   );
+}
+
+/**
+ * Returns exact owner-scoped totals from persisted history only. This intentionally
+ * bypasses period buckets so lifetime totals are not limited to one calendar range.
+ */
+export async function aggregateLifetimeMoneySummary(
+  ownerId: string,
+  history: SessionHistoryAdapter,
+): Promise<LifetimeMoneySummary> {
+  const canonicalOwnerId = parseOwnerId(ownerId);
+  let records: readonly SessionRecord[];
+
+  try {
+    records = await history.listByOwnerAndRange(
+      canonicalOwnerId,
+      0,
+      Number.MAX_SAFE_INTEGER,
+    );
+  } catch (error) {
+    if (error instanceof AggregationError) throw error;
+    return fail("HISTORY_QUERY_FAILED");
+  }
+
+  const aggregate = emptyAggregate();
+  const seenSessionIds = new Set<string>();
+  for (const record of records) {
+    if (record.ownerId !== canonicalOwnerId || seenSessionIds.has(record.sessionId)) {
+      continue;
+    }
+    seenSessionIds.add(record.sessionId);
+    addRecord(aggregate, record);
+  }
+
+  return Object.freeze({
+    ownerId: canonicalOwnerId,
+    sessionCount: aggregate.sessionCount,
+    earnedYen: aggregate.earnedYen,
+    wastedYen: aggregate.wastedYen,
+    netYen: aggregate.netYen,
+  });
 }
