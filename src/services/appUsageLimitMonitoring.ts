@@ -6,6 +6,7 @@ import { createInitialAppUsageLimitState } from "./appUsageLimitStateService";
 import type { AppUsageLimitNotificationDeliveryState } from "./appUsageLimitCooldownService";
 import type { AppUsageLimitState } from "../types/appUsageLimitState";
 import { createNormalizedDesktopAppId } from "../utils/hourlyRateSettingsSchemas";
+import { loadAppUsageLimitRuntime, saveAppUsageLimitRuntime } from "../repositories/appUsageLimitStateRepository";
 
 const POLL_INTERVAL_MS = 1_000;
 const SETTINGS_REFRESH_INTERVAL = 10;
@@ -16,8 +17,9 @@ function localDate(): string {
 
 export async function startAppUsageLimitMonitoring(): Promise<() => void> {
   let settings = await appUsageLimitSettingsRepository.load();
-  let state: AppUsageLimitState | null = null;
-  let deliveryState: AppUsageLimitNotificationDeliveryState = {};
+  const runtime = await loadAppUsageLimitRuntime(localDate());
+  let state: AppUsageLimitState | null = runtime.state;
+  let deliveryState: AppUsageLimitNotificationDeliveryState = runtime.deliveryState;
   let stopped = false;
   let pollCount = 0;
 
@@ -44,6 +46,7 @@ export async function startAppUsageLimitMonitoring(): Promise<() => void> {
       );
       state = result.state;
       deliveryState = result.deliveryState;
+      await saveAppUsageLimitRuntime(state, deliveryState);
     } catch {
       // A transient foreground-window or notification error must not stop monitoring.
     }
