@@ -1,3 +1,5 @@
+import { calculateHouseEquivalent } from "../../services/houseEquivalentService";
+import { HOUSE_EQUIVALENT_FIXTURES } from "../../test/fixtures/houseEquivalent";
 import { ResultFlow } from "./ResultFlow";
 
 type ResultFlowPreviewProps = {
@@ -5,5 +7,12 @@ type ResultFlowPreviewProps = {
 };
 
 export function ResultFlowPreview({ onExit }: ResultFlowPreviewProps) {
-  return <ResultFlow onExit={onExit} />;
+  return (
+    <ResultFlow
+      houseEquivalentPreview={calculateHouseEquivalent(
+        HOUSE_EQUIVALENT_FIXTURES.multipleWithProgress,
+      )}
+      onExit={onExit}
+    />
+  );
 }
