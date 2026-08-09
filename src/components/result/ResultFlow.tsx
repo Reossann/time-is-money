@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, type ComponentType } from "react";
 
 import { RESULT_FLOW_STEPS } from "../../constants/resultFlow";
 import { useResultFlowStore } from "../../stores/useResultFlowStore";
@@ -13,11 +13,17 @@ import { HouseEquivalentStep } from "./steps/HouseEquivalentStep";
 import { ImprovementStep } from "./steps/ImprovementStep";
 import { LifetimeMoneyStep } from "./steps/LifetimeMoneyStep";
 import { ReturningHomeStep } from "./steps/ReturningHomeStep";
-import { SessionMoneyStep } from "./steps/SessionMoneyStep";
+import {
+  SessionMoneyStep,
+  type SessionMoneyStepProps,
+} from "./steps/SessionMoneyStep";
 import type { ResultStepProps } from "./steps/ResultStepPlaceholder";
 
+type ResultFlowStepProps = ResultStepProps &
+  Pick<SessionMoneyStepProps, "sessionResult" | "onAnimationComplete">;
+
 const STEP_COMPONENTS: Readonly<
-  Record<ResultFlowStep, ComponentType<ResultStepProps>>
+  Record<ResultFlowStep, ComponentType<ResultFlowStepProps>>
 > = {
   finalizing: FinalizingStep,
   "app-breakdown": AppBreakdownStep,
@@ -29,11 +35,17 @@ const STEP_COMPONENTS: Readonly<
   "returning-home": ReturningHomeStep,
 };
 
-type ResultFlowProps = {
+export type ResultFlowProps = {
   onExit: () => void;
+  sessionResult?: SessionMoneyStepProps["sessionResult"];
+  onSessionMoneyAnimationComplete?: SessionMoneyStepProps["onAnimationComplete"];
 };
 
-export function ResultFlow({ onExit }: ResultFlowProps) {
+export function ResultFlow({
+  onExit,
+  sessionResult,
+  onSessionMoneyAnimationComplete,
+}: ResultFlowProps) {
   const status = useResultFlowStore((state) => state.status);
   const mode = useResultFlowStore((state) => state.mode);
   const currentStep = useResultFlowStore((state) => state.currentStep);
@@ -52,6 +64,20 @@ export function ResultFlow({ onExit }: ResultFlowProps) {
   const skipAll = useResultFlowStore((state) => state.skipAll);
   const finish = useResultFlowStore((state) => state.finish);
   const hasExited = useRef(false);
+  const completedMoneyAnimations = useRef(new Set<string>());
+
+  const reportMoneyAnimationComplete = useCallback<
+    NonNullable<SessionMoneyStepProps["onAnimationComplete"]>
+  >(
+    (completion) => {
+      const completionId = `${completion.runId}:${completion.reason}`;
+      if (completedMoneyAnimations.current.has(completionId)) return;
+
+      completedMoneyAnimations.current.add(completionId);
+      onSessionMoneyAnimationComplete?.(completion);
+    },
+    [onSessionMoneyAnimationComplete],
+  );
 
   useEffect(() => {
     if (status !== "completed" || hasExited.current) return;
@@ -80,6 +106,8 @@ export function ResultFlow({ onExit }: ResultFlowProps) {
             content={RESULT_FLOW_PREVIEW_CONTENT[currentStep]}
             status={stepStatus}
             animationSkipped={animationSkipped}
+            sessionResult={sessionResult}
+            onAnimationComplete={reportMoneyAnimationComplete}
           />
         </div>
         <ResultFlowControls

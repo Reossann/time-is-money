@@ -35,6 +35,7 @@ function spyRepository(base: SessionRecordRepository = createInMemorySessionReco
       listByDate: base.listByDate.bind(base),
       listByApp: base.listByApp.bind(base),
       listByOwner: base.listByOwner.bind(base),
+      listByOwnerInRange: base.listByOwnerInRange.bind(base),
     } satisfies SessionRecordRepository,
     save,
     remove,

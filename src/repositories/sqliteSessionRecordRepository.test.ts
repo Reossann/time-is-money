@@ -144,6 +144,15 @@ class FakeSqlDatabase implements SqlDatabase {
         return Promise.resolve(
           this.sortedParents((parent) => parent.owner_id === bindValues[0]) as T,
         );
+      case SESSION_RECORD_SQL.selectByOwnerInRange:
+        return Promise.resolve(
+          this.sortedParents(
+            (parent) =>
+              parent.owner_id === bindValues[0] &&
+              parent.ended_at >= Number(bindValues[1]) &&
+              parent.ended_at < Number(bindValues[2]),
+          ).slice(0, Number(bindValues[3])) as T,
+        );
       case SESSION_RECORD_SQL.selectByDate:
         return Promise.resolve(
           this.sortedParents(
@@ -251,6 +260,20 @@ describe("SqliteSessionRecordRepository", () => {
 
     const all = await repository.listByOwner("owner-1");
     expect(all.map((record) => record.sessionId)).toEqual(["s2", "s1"]);
+  });
+
+  it("lists an owner-scoped end-boundary range with a limit", async () => {
+    await repository.save(makeRecord("s1", "owner-1", END));
+    await repository.save(makeRecord("s2", "owner-1", END_NEXT_DAY));
+    await repository.save(makeRecord("s3", "owner-2", END_NEXT_DAY));
+
+    const records = await repository.listByOwnerInRange(
+      "owner-1",
+      END,
+      END_NEXT_DAY + 1,
+      1,
+    );
+    expect(records.map((record) => record.sessionId)).toEqual(["s2"]);
   });
 
   it("removes a record for the matching owner", async () => {
