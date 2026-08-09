@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { LifetimeMoneySummary } from "../../../types/aggregation";
 import type { ResultFlowPreviewContent } from "../../../types/resultFlow";
+import { calculateHouseEquivalent } from "../../../services/houseEquivalentService";
+import { HOUSE_EQUIVALENT_FIXTURES } from "../../../test/fixtures/houseEquivalent";
 import { HouseEquivalentStep } from "./HouseEquivalentStep";
 
 const content: ResultFlowPreviewContent = {
@@ -52,6 +54,26 @@ describe("HouseEquivalentStep", () => {
     );
 
     expect(screen.getByText("準備中")).toBeInTheDocument();
+    expect(getSummary).not.toHaveBeenCalled();
+  });
+
+  it("shows a passed development fixture without reading persisted data", () => {
+    const getSummary = vi.fn(async () => summary());
+
+    render(
+      <HouseEquivalentStep
+        animationSkipped={false}
+        content={content}
+        lifetimeSummary={{ getSummary }}
+        ownerIdentity={{ getCurrentOwnerId: async () => "owner-1" }}
+        previewEquivalent={calculateHouseEquivalent(
+          HOUSE_EQUIVALENT_FIXTURES.multipleWithProgress,
+        )}
+        status="placeholder"
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "家3軒と50%分" })).toBeInTheDocument();
     expect(getSummary).not.toHaveBeenCalled();
   });
 
