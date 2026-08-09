@@ -83,13 +83,19 @@ export function GraphPage({ accountId, graphService }: GraphPageProps = {}) {
   };
 
   return (
-    <main className="page">
+    <main className="page graph-page">
       <h2>グラフ</h2>
-      <GraphPeriodControls value={period} onChange={setPeriod} />
-      <GraphMetricControls value={metric} onChange={setMetric} />
-      {isDemo ? <p className="graph-demo-notice">開発用デモデータ</p> : null}
-      <p role="status">表示期間: {PERIOD_LABELS[period]}</p>
-      <p role="status">表示指標: {METRIC_LABELS[metric]}</p>
+      <div className="graph-toolbar">
+        <div className="graph-toolbar__controls">
+          <GraphPeriodControls value={period} onChange={setPeriod} />
+          <GraphMetricControls value={metric} onChange={setMetric} />
+        </div>
+        <div className="graph-toolbar__summary">
+          {isDemo ? <p className="graph-demo-notice">開発用デモデータ</p> : null}
+          <p role="status">表示期間: {PERIOD_LABELS[period]}</p>
+          <p role="status">表示指標: {METRIC_LABELS[metric]}</p>
+        </div>
+      </div>
       {service === null ? (
         <p>グラフデータ連携は準備中です。</p>
       ) : (

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Monitor } from "lucide-react";
 
 import {
   hourlyRateSettingsRepository,
@@ -654,7 +655,10 @@ export function HourlyRateSettingsSection({
                         className="hourly-rate-settings__app-card"
                         key={entry.appId}
                       >
-                        <h5>{entry.processName}</h5>
+                        <h5 className="hourly-rate-settings__app-name">
+                          <Monitor size={18} aria-hidden="true" />
+                          <span>{entry.processName}</span>
+                        </h5>
                         <p className="hourly-rate-settings__active-rate">
                           {entry.hourlyRateYen === null
                             ? `デフォルト時給を使用中: ${resolvedHourlyRateYen}円/時`
@@ -697,22 +701,7 @@ export function HourlyRateSettingsSection({
 
                         <div className="hourly-rate-settings__app-actions">
                           <button
-                            type="button"
-                            onClick={() =>
-                              void handleSaveAppRate(
-                                entry.appId,
-                                entry.processName,
-                              )
-                            }
-                            disabled={isSaving}
-                            aria-label={`${entry.processName}の上書き時給を保存`}
-                          >
-                            {isThisAppSaving &&
-                            appSaveOperation.action === "save"
-                              ? "保存中..."
-                              : "保存"}
-                          </button>
-                          <button
+                            className="hourly-rate-settings__app-action--clear"
                             type="button"
                             onClick={() =>
                               void handleClearAppRate(
@@ -727,6 +716,23 @@ export function HourlyRateSettingsSection({
                             appSaveOperation.action === "clear"
                               ? "解除中..."
                               : "上書きを解除"}
+                          </button>
+                          <button
+                            className="hourly-rate-settings__app-action--save"
+                            type="button"
+                            onClick={() =>
+                              void handleSaveAppRate(
+                                entry.appId,
+                                entry.processName,
+                              )
+                            }
+                            disabled={isSaving}
+                            aria-label={`${entry.processName}の上書き時給を保存`}
+                          >
+                            {isThisAppSaving &&
+                            appSaveOperation.action === "save"
+                              ? "保存中..."
+                              : "保存"}
                           </button>
                         </div>
 
