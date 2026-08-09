@@ -1271,65 +1271,66 @@ button {
 }
 
 @keyframes house-equivalent-foundation-enter {
-  from {
-    opacity: 0;
-    transform: scaleX(0.15);
-  }
-
-  to {
-    opacity: 1;
-    transform: scaleX(1);
-  }
+  from { opacity: 0; transform: scaleX(0.15); }
+  to { opacity: 1; transform: scaleX(1); }
 }
 
 @keyframes house-equivalent-frame-enter {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scaleY(0.4);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
+  from { opacity: 0; transform: translateY(18px) scaleY(0.4); }
+  to { opacity: 1; transform: translateY(0) scaleY(1); }
 }
 
 @keyframes house-equivalent-walls-enter {
-  from {
-    opacity: 0;
-    transform: scaleY(0.25);
-    transform-origin: bottom;
-  }
-
-  to {
-    opacity: 1;
-    transform: scaleY(1);
-    transform-origin: bottom;
-  }
+  from { opacity: 0; transform: scaleY(0.25); transform-origin: bottom; }
+  to { opacity: 1; transform: scaleY(1); transform-origin: bottom; }
 }
 
 @keyframes house-equivalent-roof-enter {
-  from {
-    opacity: 0;
-    transform: translateY(-15px) rotate(45deg) scale(0.65);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) rotate(45deg) scale(1);
-  }
+  from { opacity: 0; transform: translateY(-15px) rotate(45deg) scale(0.65); }
+  to { opacity: 1; transform: translateY(0) rotate(45deg) scale(1); }
 }
 
 @keyframes house-equivalent-window-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.2);
-  }
+  from { opacity: 0; transform: scale(0.2); }
+  to { opacity: 1; transform: scale(1); }
+}
 
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.money-animation {
+  --money-animation-accent: #1a8f5b;
+  --money-animation-soft: rgba(26, 143, 91, 0.14);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.75fr);
+  gap: 24px;
+  align-items: center;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--money-animation-accent) 32%, transparent);
+  border-radius: 20px;
+  background: radial-gradient(circle at 90% 8%, var(--money-animation-soft), transparent 44%), rgba(255, 255, 255, 0.7);
+}
+
+.money-animation--wasted { --money-animation-accent: #b45309; --money-animation-soft: rgba(180, 83, 9, 0.15); }
+.money-animation__copy { display: grid; gap: 8px; }
+.money-animation__mode { width: fit-content; margin: 0; padding: 4px 10px; border-radius: 999px; background: var(--money-animation-soft); color: var(--money-animation-accent); font-weight: 800; }
+.money-animation__title, .money-animation__description, .money-animation__zero-state { margin: 0; }
+.money-animation__title { font-size: clamp(1.35rem, 3vw, 2rem); }
+.money-animation__amount { color: var(--money-animation-accent); font-size: clamp(2rem, 6vw, 3.8rem); font-weight: 900; letter-spacing: -0.04em; }
+.money-animation__description, .money-animation__zero-state { color: var(--text-muted); line-height: 1.7; }
+.money-animation__zero-state { font-weight: 700; }
+.money-animation__stage { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; min-height: 150px; align-content: end; padding: 20px; border-radius: 16px; background: color-mix(in srgb, var(--money-animation-soft) 70%, white); }
+.money-animation__particle { display: block; aspect-ratio: 1; border: 3px solid color-mix(in srgb, var(--money-animation-accent) 62%, white); border-radius: 50%; background: linear-gradient(135deg, #fff7c2, var(--money-animation-accent)); box-shadow: 0 5px 10px color-mix(in srgb, var(--money-animation-accent) 24%, transparent); }
+.money-animation--playing.money-animation--earned .money-animation__particle { animation: money-animation-earned-coin 620ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: calc(var(--money-animation-entry-delay, 180ms) + var(--money-particle-delay, 0ms)); }
+.money-animation--playing.money-animation--wasted .money-animation__particle { animation: money-animation-wasted-coin 620ms cubic-bezier(0.4, 0, 1, 1) both; animation-delay: calc(var(--money-animation-entry-delay, 180ms) + var(--money-particle-delay, 0ms)); }
+.session-money-step__animations { display: grid; gap: 16px; width: 100%; }
+
+@keyframes money-animation-earned-coin {
+  from { opacity: 0; transform: translateY(-96px) scale(0.55) rotate(-20deg); }
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+
+@keyframes money-animation-wasted-coin {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to { opacity: 0.22; transform: translateX(96px) scale(0.62); }
 }
 
 .calendar-save {
@@ -1440,6 +1441,10 @@ button {
   }
 
   .house-equivalent-animation__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .money-animation {
     grid-template-columns: 1fr;
   }
 
