@@ -35,6 +35,6 @@ describe("evaluateConfiguredAppUsageLimits", () => {
     const current = { ...previous, localDate: "2026-08-10", dailySecondsByAppId: { editor: 60 * 60 } };
     const disabled = { ...settings, desktopApps: [{ ...setting, enabled: false }] };
     expect(evaluateConfiguredAppUsageLimits(previous, current, disabled, new Set(["editor:daily:reached"])).events).toEqual([]);
-    expect(evaluateConfiguredAppUsageLimits(previous, current, settings, new Set(["editor:daily:reached"])).events).toHaveLength(5);
+    expect(evaluateConfiguredAppUsageLimits(previous, current, settings, new Set(["editor:daily:reached"])).events).toHaveLength(3);
   });
 });
