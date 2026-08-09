@@ -1,4 +1,7 @@
+import { useEffect, useRef, type CSSProperties } from "react";
+
 import { MAX_RENDERED_COMPLETED_HOUSES } from "../../constants/houseEquivalent";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import type {
   HouseConstructionStage,
   HouseEquivalent,
@@ -6,13 +9,20 @@ import type {
 
 type HouseEquivalentAnimationProps = Readonly<{
   equivalent: HouseEquivalent;
+  animationSkipped?: boolean;
+  onComplete?: () => void;
+  onSkip?: () => void;
 }>;
 
 type HouseIllustrationProps = Readonly<{
   stage: HouseConstructionStage;
   completed?: boolean;
+  isAnimating: boolean;
+  order: number;
   testId?: string;
 }>;
+
+export const HOUSE_EQUIVALENT_ANIMATION_DURATION_MS = 1_500;
 
 const STAGE_LABELS: Readonly<Record<HouseConstructionStage, string>> = {
   foundation: "基礎",
@@ -29,6 +39,8 @@ function formatYen(value: number) {
 function HouseIllustration({
   stage,
   completed = false,
+  isAnimating,
+  order,
   testId,
 }: HouseIllustrationProps) {
   const visibleStage = completed ? "finishing" : stage;
@@ -45,9 +57,10 @@ function HouseIllustration({
       aria-hidden="true"
       className={`house-equivalent-animation__house house-equivalent-animation__house--${visibleStage}${
         completed ? " house-equivalent-animation__house--completed" : ""
-      }`}
+      }${isAnimating ? " house-equivalent-animation__house--animated" : ""}`}
       data-stage={visibleStage}
       data-testid={testId}
+      style={{ "--house-animation-order": order } as CSSProperties}
     >
       <span className="house-equivalent-animation__foundation" />
       {hasFrame ? (
@@ -68,7 +81,11 @@ function HouseIllustration({
 
 export function HouseEquivalentAnimation({
   equivalent,
+  animationSkipped = false,
+  onComplete,
+  onSkip,
 }: HouseEquivalentAnimationProps) {
+  const prefersReducedMotion = useReducedMotion();
   const renderedCompletedHouseCount = Math.min(
     equivalent.completedHouseCount,
     MAX_RENDERED_COMPLETED_HOUSES,
@@ -79,11 +96,56 @@ export function HouseEquivalentAnimation({
     { length: renderedCompletedHouseCount },
     (_, index) => index,
   );
+  const animationKey = [
+    equivalent.earnedYen,
+    equivalent.wastedYen,
+    equivalent.completedHouseCount,
+    equivalent.currentHouseProgressPercent,
+    equivalent.constructionStage,
+  ].join(":");
+  const animationCanPlay =
+    equivalent.earnedYen > 0 && !animationSkipped && !prefersReducedMotion;
+  const completionKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (completionKeyRef.current === animationKey) return undefined;
+
+    if (animationSkipped) {
+      completionKeyRef.current = animationKey;
+      onSkip?.();
+      return undefined;
+    }
+
+    if (!animationCanPlay) {
+      completionKeyRef.current = animationKey;
+      onComplete?.();
+      return undefined;
+    }
+
+    const timerId = window.setTimeout(() => {
+      if (completionKeyRef.current === animationKey) return;
+
+      completionKeyRef.current = animationKey;
+      onComplete?.();
+    }, HOUSE_EQUIVALENT_ANIMATION_DURATION_MS);
+
+    return () => window.clearTimeout(timerId);
+  }, [animationCanPlay, animationKey, animationSkipped, onComplete, onSkip]);
 
   return (
     <section
       aria-labelledby="house-equivalent-heading"
-      className="house-equivalent-animation"
+      className={`house-equivalent-animation${
+        animationCanPlay ? " house-equivalent-animation--playing" : ""
+      }${animationSkipped ? " house-equivalent-animation--skipped" : ""}${
+        prefersReducedMotion
+          ? " house-equivalent-animation--reduced-motion"
+          : ""
+      }`}
+      data-animation-state={
+        animationSkipped ? "skipped" : animationCanPlay ? "playing" : "static"
+      }
+      data-testid="house-equivalent-animation"
     >
       <header className="house-equivalent-animation__header">
         <p className="house-equivalent-animation__eyebrow">累計の成果</p>
@@ -104,7 +166,9 @@ export function HouseEquivalentAnimation({
           {completedHouses.map((index) => (
             <HouseIllustration
               completed
+              isAnimating={animationCanPlay}
               key={index}
+              order={index}
               stage="finishing"
               testId="house-equivalent-completed-house"
             />
@@ -121,6 +185,8 @@ export function HouseEquivalentAnimation({
 
         <div className="house-equivalent-animation__current-house">
           <HouseIllustration
+            isAnimating={animationCanPlay}
+            order={renderedCompletedHouseCount}
             stage={equivalent.constructionStage}
             testId="house-equivalent-current-house"
           />

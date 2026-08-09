@@ -1,9 +1,26 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HOUSE_UNIT_YEN } from "../../constants/houseEquivalent";
 import { calculateHouseEquivalent } from "../../services/houseEquivalentService";
-import { HouseEquivalentAnimation } from "./HouseEquivalentAnimation";
+import {
+  HouseEquivalentAnimation,
+  HOUSE_EQUIVALENT_ANIMATION_DURATION_MS,
+} from "./HouseEquivalentAnimation";
+
+let prefersReducedMotion = false;
+
+function mockReducedMotion() {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: prefersReducedMotion,
+      removeEventListener: vi.fn(),
+    })),
+    writable: true,
+  });
+}
 
 function renderHouseEquivalent(earnedYen: number, wastedYen = 0) {
   return render(
@@ -14,6 +31,15 @@ function renderHouseEquivalent(earnedYen: number, wastedYen = 0) {
 }
 
 describe("HouseEquivalentAnimation", () => {
+  beforeEach(() => {
+    prefersReducedMotion = false;
+    mockReducedMotion();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows a foundation and guidance when no money has been earned", () => {
     renderHouseEquivalent(0);
 
@@ -88,5 +114,101 @@ describe("HouseEquivalentAnimation", () => {
     );
     expect(screen.getByText("累計獲得額:")).toBeInTheDocument();
     expect(screen.getByText("300,000,000,000円")).toBeInTheDocument();
+  });
+
+  it("reports completion once after the house animation finishes", () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+
+    render(
+      <HouseEquivalentAnimation
+        equivalent={calculateHouseEquivalent({
+          earnedYen: HOUSE_UNIT_YEN / 2,
+          wastedYen: 0,
+        })}
+        onComplete={onComplete}
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(HOUSE_EQUIVALENT_ANIMATION_DURATION_MS);
+      vi.advanceTimersByTime(HOUSE_EQUIVALENT_ANIMATION_DURATION_MS);
+    });
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("house-equivalent-animation")).toHaveAttribute(
+      "data-animation-state",
+      "playing",
+    );
+  });
+
+  it("cancels the animation and reports a skip once", () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    const onSkip = vi.fn();
+    const equivalent = calculateHouseEquivalent({
+      earnedYen: HOUSE_UNIT_YEN / 2,
+      wastedYen: 0,
+    });
+    const view = render(
+      <HouseEquivalentAnimation
+        equivalent={equivalent}
+        onComplete={onComplete}
+        onSkip={onSkip}
+      />,
+    );
+
+    view.rerender(
+      <HouseEquivalentAnimation
+        animationSkipped
+        equivalent={equivalent}
+        onComplete={onComplete}
+        onSkip={onSkip}
+      />,
+    );
+    act(() => {
+      vi.advanceTimersByTime(HOUSE_EQUIVALENT_ANIMATION_DURATION_MS);
+    });
+
+    expect(onSkip).toHaveBeenCalledTimes(1);
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(screen.getByTestId("house-equivalent-animation")).toHaveAttribute(
+      "data-animation-state",
+      "skipped",
+    );
+  });
+
+  it("uses a static display for zero money and reduced motion", () => {
+    const onComplete = vi.fn();
+    const zero = calculateHouseEquivalent({ earnedYen: 0, wastedYen: 0 });
+    const view = render(
+      <HouseEquivalentAnimation equivalent={zero} onComplete={onComplete} />,
+    );
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("house-equivalent-animation")).toHaveAttribute(
+      "data-animation-state",
+      "static",
+    );
+
+    prefersReducedMotion = true;
+    mockReducedMotion();
+    view.unmount();
+    render(
+      <HouseEquivalentAnimation
+        equivalent={calculateHouseEquivalent({
+          earnedYen: HOUSE_UNIT_YEN / 2,
+          wastedYen: 0,
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("house-equivalent-animation")).toHaveClass(
+      "house-equivalent-animation--reduced-motion",
+    );
+    expect(screen.getByTestId("house-equivalent-animation")).toHaveAttribute(
+      "data-animation-state",
+      "static",
+    );
   });
 });
