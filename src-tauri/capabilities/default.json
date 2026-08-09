@@ -10,6 +10,8 @@
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "notification:default",
+    "notification:allow-permission-state",
+    "notification:allow-request-permission",
     "core:event:default",
     "core:event:allow-listen",
     "store:allow-load",

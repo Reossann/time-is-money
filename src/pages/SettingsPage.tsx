@@ -6,8 +6,10 @@ import {
 } from '@tauri-apps/plugin-autostart';
 import { HourlyRateSettingsSection } from '../components/settings/HourlyRateSettingsSection';
 import { AppCategorySettingsSection } from '../components/settings/AppCategorySettingsSection';
+import { AppUsageLimitSettingsSection } from '../components/settings/AppUsageLimitSettingsSection';
 import { createDefaultSettings, loadSettings, saveSettings } from '../services/settingsService';
 import type { AppSettings, NotificationIntervalMinutes, NotificationTone } from '../types/settings';
+import { getNotificationPermissionState, notificationPermissionGuideMessage, requestNotificationPermission, type NotificationPermissionState } from '../services/notificationPermissionService';
 
 export function SettingsPage() {
   const [autostartEnabled, setAutostartEnabled] = useState(false);
@@ -17,6 +19,7 @@ export function SettingsPage() {
   >(null);
   const [settings, setSettings] = useState<AppSettings>(createDefaultSettings());
   const [settingsErrorMessage, setSettingsErrorMessage] = useState<string | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionState>('unknown');
 
   useEffect(() => {
     const checkAutostartStatus = async () => {
@@ -39,6 +42,7 @@ export function SettingsPage() {
 
     void checkAutostartStatus();
     void initialiseSettings();
+    void getNotificationPermissionState().then(setNotificationPermission).catch(() => setNotificationPermission('unknown'));
   }, []);
 
   const handleAutostartToggle = async (enabled: boolean) => {
@@ -108,9 +112,19 @@ export function SettingsPage() {
 
       <HourlyRateSettingsSection />
       <AppCategorySettingsSection />
+      <AppUsageLimitSettingsSection />
 
       <section className="settings-section">
         <h3>通知設定</h3>
+        <p>通知権限: {notificationPermission === 'granted' ? '許可済み' : notificationPermission === 'denied' ? '拒否されています' : '未確認'}</p>
+        {notificationPermission !== 'granted' ? (
+          <>
+            {notificationPermissionGuideMessage(notificationPermission) ? <p role="alert">{notificationPermissionGuideMessage(notificationPermission)}</p> : null}
+            <button type="button" onClick={() => void requestNotificationPermission().then(setNotificationPermission)}>
+              通知を許可する
+            </button>
+          </>
+        ) : null}
         <p>通知の口調と頻度を選択できます。選択した内容は自動で保存されます。</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
           <div>

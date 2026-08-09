@@ -50,6 +50,30 @@ fn receive_web_app_url(url: String) -> Result<String, String> {
     }
 }
 
+#[tauri::command(rename_all = "camelCase")]
+fn send_app_usage_limit_notification(
+    app: AppHandle,
+    app_name: String,
+    kind: String,
+    notification: String,
+) -> Result<(), String> {
+    if app_name.trim().is_empty() {
+        return Err("APP_NAME_REQUIRED".to_owned());
+    }
+    let title = if kind == "continuous" {
+        "Time Is Money - 連続利用制限"
+    } else {
+        "Time Is Money - 日次利用制限"
+    };
+    let body = format!("{}: {}", app_name.trim(), notification);
+    app.notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show()
+        .map_err(|_| "NOTIFICATION_FAILED".to_owned())
+}
+
 fn show_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if let Err(error) = window.unminimize() {
@@ -135,7 +159,8 @@ pub fn run() {
             commands::activity::get_app_usage_tracking_snapshot,
             commands::activity::stop_app_usage_tracking,
             native_bridge::get_latest_native_web_app_event,
-            receive_web_app_url
+            receive_web_app_url,
+            send_app_usage_limit_notification
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

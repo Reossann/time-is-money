@@ -9,6 +9,7 @@ import { CalendarPage } from "./pages/CalendarPage";
 import { GraphPage } from "./pages/GraphPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { startNativeWebAppBridgeListener } from "./services/nativeBridgeService";
+import { startAppUsageLimitMonitoring } from "./services/appUsageLimitMonitoring";
 import type { NavigationId } from "./constants/navigation";
 
 const pageMap: Record<NavigationId, React.ReactNode> = {
@@ -43,6 +44,24 @@ export function App() {
     return () => {
       isDisposed = true;
       unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let dispose: (() => void) | undefined;
+    let isDisposed = false;
+    startAppUsageLimitMonitoring().then((stop) => {
+      if (isDisposed) {
+        stop();
+      } else {
+        dispose = stop;
+      }
+    }).catch((error) => {
+      console.error("利用制限監視の開始に失敗しました", error);
+    });
+    return () => {
+      isDisposed = true;
+      dispose?.();
     };
   }, []);
 
