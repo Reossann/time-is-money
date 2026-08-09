@@ -106,12 +106,20 @@ fn load_notification_settings(app_handle: &AppHandle) -> AppSettings {
 }
 
 fn session_record_migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "create_session_records",
-        sql: include_str!("../migrations/0001_session_records.sql"),
-        kind: MigrationKind::Up,
-    }]
+    vec![
+        Migration {
+            version: 1,
+            description: "create_session_records",
+            sql: include_str!("../migrations/0001_session_records.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "index_session_records_owner_ended",
+            sql: include_str!("../migrations/0002_session_records_owner_ended.sql"),
+            kind: MigrationKind::Up,
+        },
+    ]
 }
 
 pub fn run() {

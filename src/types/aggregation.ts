@@ -39,7 +39,8 @@ export type AggregationErrorCode =
   | "INVALID_PERIOD_RANGE"
   | "UNSUPPORTED_TIME_ZONE"
   | "HISTORY_QUERY_FAILED"
-  | "AGGREGATION_OVERFLOW";
+  | "AGGREGATION_OVERFLOW"
+  | "QUERY_LIMIT_EXCEEDED";
 
 export class AggregationError extends Error {
   constructor(

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SessionHistoryAdapter } from "./sessionHistoryAdapter";
 import { aggregateSessionHistory } from "./aggregationService";
 import { buildSessionRecord } from "./sessionRecordService";
+import { AggregationError } from "../types/aggregation";
 
 function record(
   sessionId: string,
@@ -96,6 +97,18 @@ describe("aggregateSessionHistory", () => {
     };
     await expect(aggregateSessionHistory(query, failingHistory)).rejects.toMatchObject({
       code: "HISTORY_QUERY_FAILED",
+    });
+  });
+
+  it("preserves a safe history query limit error", async () => {
+    const limitedHistory: SessionHistoryAdapter = {
+      listByOwnerAndRange: async () =>
+        Promise.reject(
+          new AggregationError("QUERY_LIMIT_EXCEEDED", "history result limit exceeded"),
+        ),
+    };
+    await expect(aggregateSessionHistory(query, limitedHistory)).rejects.toMatchObject({
+      code: "QUERY_LIMIT_EXCEEDED",
     });
   });
 });

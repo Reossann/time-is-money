@@ -111,7 +111,8 @@ export async function aggregateSessionHistory(
   let records: readonly SessionRecord[];
   try {
     records = await history.listByOwnerAndRange(query.ownerId, fromMs, toMs);
-  } catch {
+  } catch (error) {
+    if (error instanceof AggregationError) throw error;
     return fail("HISTORY_QUERY_FAILED");
   }
 
