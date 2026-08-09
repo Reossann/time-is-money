@@ -7,10 +7,10 @@ import { GraphTable } from "../components/graph/GraphTable";
 import { TrendChart } from "../components/graph/TrendChart";
 import { useGraphData } from "../hooks/useGraphData";
 import { demoGraphQueryService } from "../services/graphDemoData";
-import {
-  unavailableGraphQueryService,
-} from "../services/graphDataSource";
-import type { GraphQueryService } from "../services/graphQueryService";
+import type {
+  GraphQueryParams,
+  GraphQueryService,
+} from "../services/graphQueryService";
 import type { GraphMetric, GraphPeriod } from "../types/graph";
 
 const PERIOD_LABELS: Readonly<Record<GraphPeriod, string>> = {
@@ -31,20 +31,56 @@ type GraphPageProps = Readonly<{
   graphService?: GraphQueryService;
 }>;
 
+type GraphDataSectionProps = Readonly<{
+  service: GraphQueryService;
+  params: GraphQueryParams;
+}>;
+
+function GraphDataSection({ service, params }: GraphDataSectionProps) {
+  const graphState = useGraphData({ service, params });
+
+  if (graphState.status === "loading") {
+    return <p>グラフを読み込んでいます。</p>;
+  }
+
+  if (graphState.status === "empty") {
+    return <p>この期間のデータはありません。</p>;
+  }
+
+  if (graphState.status === "error") {
+    return (
+      <div className="error-section" role="alert">
+        <p>{graphState.errorMessage}</p>
+        <button type="button" onClick={graphState.retry}>
+          再試行
+        </button>
+      </div>
+    );
+  }
+
+  if (graphState.status === "success" && graphState.data !== null) {
+    return (
+      <section className="graph-section" aria-label="グラフ表示">
+        <GraphLegend metric={graphState.data.metric} />
+        <TrendChart data={graphState.data} />
+        <GraphTable data={graphState.data} />
+      </section>
+    );
+  }
+
+  return <p>グラフデータを取得すると、ここに推移を表示します。</p>;
+}
+
 export function GraphPage({ accountId, graphService }: GraphPageProps = {}) {
   const [period, setPeriod] = useState<GraphPeriod>("day");
   const [metric, setMetric] = useState<GraphMetric>("usageSeconds");
   const isDemo = graphService === undefined && import.meta.env.DEV;
-  const service = graphService ??
-    (isDemo ? demoGraphQueryService : unavailableGraphQueryService);
-  const graphState = useGraphData({
-    service,
-    params: {
-      accountId: accountId ?? "local-account",
-      period,
-      metric,
-    },
-  });
+  const service = graphService ?? (isDemo ? demoGraphQueryService : null);
+  const params: GraphQueryParams = {
+    accountId: accountId ?? "local-account",
+    period,
+    metric,
+  };
 
   return (
     <main className="page">
@@ -54,25 +90,10 @@ export function GraphPage({ accountId, graphService }: GraphPageProps = {}) {
       {isDemo ? <p className="graph-demo-notice">開発用デモデータ</p> : null}
       <p role="status">表示期間: {PERIOD_LABELS[period]}</p>
       <p role="status">表示指標: {METRIC_LABELS[metric]}</p>
-      {graphState.status === "loading" ? (
-        <p>グラフを読み込んでいます。</p>
-      ) : graphState.status === "empty" ? (
-        <p>この期間のデータはありません。</p>
-      ) : graphState.status === "error" ? (
-        <div className="error-section" role="alert">
-          <p>{graphState.errorMessage}</p>
-          <button type="button" onClick={graphState.retry}>
-            再試行
-          </button>
-        </div>
-      ) : graphState.status === "success" && graphState.data !== null ? (
-        <section className="graph-section" aria-label="グラフ表示">
-          <GraphLegend metric={graphState.data.metric} />
-          <TrendChart data={graphState.data} />
-          <GraphTable data={graphState.data} />
-        </section>
+      {service === null ? (
+        <p>グラフデータ連携は準備中です。</p>
       ) : (
-        <p>グラフデータを取得すると、ここに推移を表示します。</p>
+        <GraphDataSection service={service} params={params} />
       )}
     </main>
   );

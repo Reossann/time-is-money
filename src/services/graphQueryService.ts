@@ -87,6 +87,16 @@ export function createGraphQueryService(
         );
       }
 
+      if (
+        parsed.data.period !== params.period ||
+        parsed.data.metric !== params.metric
+      ) {
+        throw new GraphQueryError(
+          "INVALID_RESPONSE",
+          "グラフデータの表示条件が正しくありません。",
+        );
+      }
+
       return parsed.data;
     },
   };

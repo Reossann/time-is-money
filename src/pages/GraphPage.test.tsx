@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { GraphQueryService } from "../services/graphQueryService";
@@ -125,6 +125,8 @@ describe("GraphPage", () => {
         screen.getByRole("img", { name: "1件のearnedYen推移グラフ" }),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByText("1,000円")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("table")).getByText("1,000円"),
+    ).toBeInTheDocument();
   });
 });

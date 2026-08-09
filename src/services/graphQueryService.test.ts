@@ -89,6 +89,20 @@ describe("createGraphQueryService", () => {
     });
   });
 
+  it("rejects a response for a different period or metric", async () => {
+    const query = vi.fn().mockResolvedValue({
+      ...validGraphData,
+      period: "week",
+      metric: "earnedYen",
+    });
+    const service = createGraphQueryService({ query });
+
+    await expect(service.getGraphData(validParams)).rejects.toMatchObject({
+      code: "INVALID_RESPONSE",
+      message: "グラフデータの表示条件が正しくありません。",
+    });
+  });
+
   it("allows an empty but valid response", async () => {
     const query = vi.fn().mockResolvedValue({
       period: "day",
