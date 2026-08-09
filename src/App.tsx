@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
+import { ResultFlowLive } from "./components/result/ResultFlowLive";
 import { ResultFlowPreview } from "./components/result/ResultFlowPreview";
 import { useNavigation } from "./hooks/useNavigation";
 import { useMeasurementTracking } from "./hooks/useMeasurementTracking";
 import { useResultFlowStore } from "./stores/useResultFlowStore";
+import { useActivityStore } from "./stores/useActivityStore";
 import { TimerPage } from "./pages/TimerPage";
 import { CalendarPage } from "./pages/CalendarPage";
 import { GraphPage } from "./pages/GraphPage";
@@ -21,6 +23,8 @@ const pageMap: Record<NavigationId, React.ReactNode> = {
 export function App() {
   const { currentPage, setCurrentPage } = useNavigation();
   const [isResultFlowOpen, setIsResultFlowOpen] = useState(false);
+  const finalizedResult = useActivityStore((state) => state.finalizedResult);
+  const openedResultSessionId = useRef<string | null>(null);
   useMeasurementTracking();
 
   useEffect(() => {
@@ -51,12 +55,29 @@ export function App() {
     setIsResultFlowOpen(true);
   };
 
+  useEffect(() => {
+    if (
+      finalizedResult === null ||
+      openedResultSessionId.current === finalizedResult.sessionId
+    ) {
+      return;
+    }
+
+    openedResultSessionId.current = finalizedResult.sessionId;
+    useResultFlowStore.getState().start("live");
+    setIsResultFlowOpen(true);
+  }, [finalizedResult]);
+
   const exitResultFlow = () => {
     setIsResultFlowOpen(false);
+    setCurrentPage("timer");
     useResultFlowStore.getState().reset();
   };
 
   if (isResultFlowOpen) {
+    if (finalizedResult !== null) {
+      return <ResultFlowLive onExit={exitResultFlow} result={finalizedResult} />;
+    }
     return <ResultFlowPreview onExit={exitResultFlow} />;
   }
 

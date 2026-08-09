@@ -3,11 +3,14 @@ import type {
   ResultFlowStep,
   ResultStepStatus,
 } from "../../../types/resultFlow";
+import type { SessionResult } from "../../../types/sessionResult";
 
 export type ResultStepProps = {
   content: ResultFlowPreviewContent;
   status: ResultStepStatus;
   animationSkipped: boolean;
+  /** Immutable finalized result for live-flow consumers. */
+  result?: SessionResult;
 };
 
 type ResultStepPlaceholderProps = ResultStepProps & {

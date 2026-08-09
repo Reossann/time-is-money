@@ -1,9 +1,11 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 
 import { RESULT_FLOW_STEPS } from "../../constants/resultFlow";
 import { useResultFlowStore } from "../../stores/useResultFlowStore";
+import { saveFinalizedSessionRecordOnce } from "../../services/sessionRecordPersistenceController";
 import { RESULT_FLOW_PREVIEW_CONTENT } from "../../test/fixtures/resultFlowPreview";
 import type { ResultFlowStep } from "../../types/resultFlow";
+import type { SessionResult } from "../../types/sessionResult";
 import { ResultFlowControls } from "./ResultFlowControls";
 import { ResultProgress } from "./ResultProgress";
 import { AppBreakdownStep } from "./steps/AppBreakdownStep";
@@ -31,9 +33,15 @@ const STEP_COMPONENTS: Readonly<
 
 type ResultFlowProps = {
   onExit: () => void;
+  result?: SessionResult;
+  saveFinalizedSession?: () => Promise<unknown>;
 };
 
-export function ResultFlow({ onExit }: ResultFlowProps) {
+export function ResultFlow({
+  onExit,
+  result,
+  saveFinalizedSession = saveFinalizedSessionRecordOnce,
+}: ResultFlowProps) {
   const status = useResultFlowStore((state) => state.status);
   const mode = useResultFlowStore((state) => state.mode);
   const currentStep = useResultFlowStore((state) => state.currentStep);
@@ -52,6 +60,8 @@ export function ResultFlow({ onExit }: ResultFlowProps) {
   const skipAll = useResultFlowStore((state) => state.skipAll);
   const finish = useResultFlowStore((state) => state.finish);
   const hasExited = useRef(false);
+  const [isSkipAllSaving, setIsSkipAllSaving] = useState(false);
+  const [skipAllSaveFailed, setSkipAllSaveFailed] = useState(false);
 
   useEffect(() => {
     if (status !== "completed" || hasExited.current) return;
@@ -60,16 +70,36 @@ export function ResultFlow({ onExit }: ResultFlowProps) {
     onExit();
   }, [onExit, status]);
 
-  if (status === "idle" || mode !== "preview") return null;
+  if (status === "idle" || mode === null) return null;
+  if (mode === "live" && result === undefined) return null;
 
   const currentIndex = RESULT_FLOW_STEPS.indexOf(currentStep);
   const isLastStep = currentIndex === RESULT_FLOW_STEPS.length - 1;
   const StepComponent = STEP_COMPONENTS[currentStep];
+  const skipAllWithPersistence = () => {
+    if (mode !== "live") {
+      skipAll();
+      return;
+    }
+    if (isSkipAllSaving) return;
+
+    setIsSkipAllSaving(true);
+    setSkipAllSaveFailed(false);
+    void saveFinalizedSession().then(
+      () => skipAll(),
+      () => {
+        setIsSkipAllSaving(false);
+        setSkipAllSaveFailed(true);
+      },
+    );
+  };
 
   return (
     <main className="result-flow">
       <div className="result-flow__surface">
-        <p className="result-flow__eyebrow">開発用プレビュー</p>
+        <p className="result-flow__eyebrow">
+          {mode === "preview" ? "開発用プレビュー" : "今回の結果"}
+        </p>
         <ResultProgress currentStep={currentStep} />
         <div
           key={currentStep}
@@ -80,17 +110,33 @@ export function ResultFlow({ onExit }: ResultFlowProps) {
             content={RESULT_FLOW_PREVIEW_CONTENT[currentStep]}
             status={stepStatus}
             animationSkipped={animationSkipped}
+            result={result}
           />
         </div>
         <ResultFlowControls
           canPrevious={currentIndex > 0}
           isLastStep={isLastStep}
           animationSkipped={animationSkipped}
+          isSkippingAll={isSkipAllSaving}
           onPrevious={previous}
           onNext={isLastStep ? finish : next}
           onSkipAnimation={skipAnimation}
-          onSkipAll={skipAll}
+          onSkipAll={skipAllWithPersistence}
         />
+        {skipAllSaveFailed ? (
+          <div className="calendar-save">
+            <p className="calendar-save__error" role="alert">
+              保存できなかったため、結果を終了していません。
+            </p>
+            <button
+              className="calendar-save__retry"
+              onClick={skipAllWithPersistence}
+              type="button"
+            >
+              保存して終了を再試行
+            </button>
+          </div>
+        ) : null}
       </div>
     </main>
   );

@@ -13,6 +13,7 @@ import { resetMeasurementTrackingControllerForTests } from "./hooks/useMeasureme
 import { useActivityStore } from "./stores/useActivityStore";
 import { useNavigationStore } from "./stores/useNavigationStore";
 import { useResultFlowStore } from "./stores/useResultFlowStore";
+import { validSessionResult } from "./test/fixtures/sessionResult";
 
 vi.mock("@tauri-apps/plugin-autostart", () => ({
   disable: vi.fn(),
@@ -35,7 +36,20 @@ vi.mock("./services/appUsageTrackingService", async (importOriginal) => {
 const startTrackingMock = vi.mocked(startAppUsageTracking);
 const getSnapshotMock = vi.mocked(getAppUsageTrackingSnapshot);
 const stopTrackingMock = vi.mocked(stopAppUsageTracking);
+const resultFlowMocks = vi.hoisted(() => ({
+  saveFinalizedSession: vi.fn(async () => undefined),
+}));
 const SESSION_ID = "00000000-0000-4000-8000-000000000001";
+
+vi.mock("./services/sessionRecordPersistenceController", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("./services/sessionRecordPersistenceController")
+  >();
+  return {
+    ...actual,
+    saveFinalizedSessionRecordOnce: resultFlowMocks.saveFinalizedSession,
+  };
+});
 
 describe("App navigation", () => {
   beforeEach(() => {
@@ -47,6 +61,8 @@ describe("App navigation", () => {
       sessionId: null,
       measurementStatus: "idle",
       stoppedMeasurement: null,
+      finalizedResult: null,
+      finalizationErrorCode: null,
     });
     useResultFlowStore.getState().reset();
     startTrackingMock.mockReset().mockResolvedValue(undefined);
@@ -61,6 +77,7 @@ describe("App navigation", () => {
       apps: [],
     });
     stopTrackingMock.mockReset();
+    resultFlowMocks.saveFinalizedSession.mockReset().mockResolvedValue(undefined);
     vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(SESSION_ID);
   });
 
@@ -175,5 +192,35 @@ describe("App navigation", () => {
       screen.getByRole("heading", { level: 2, name: "タイマー" }),
     ).toBeInTheDocument();
     expect(useResultFlowStore.getState().status).toBe("idle");
+  });
+
+  it("opens the live result flow once after finalization and returns home", async () => {
+    const user = userEvent.setup();
+    useNavigationStore.setState({ currentPage: "graph" });
+    render(<App />);
+    await waitFor(() => expect(startTrackingMock).toHaveBeenCalledOnce());
+
+    act(() => {
+      useActivityStore.getState().stopMeasurement(Date.now() + 1);
+      useActivityStore.getState().markFinalized(validSessionResult);
+    });
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "計測結果を確定",
+      }),
+    ).toBeInTheDocument();
+    expect(useResultFlowStore.getState().mode).toBe("live");
+
+    await user.click(
+      screen.getByRole("button", { name: "結果演出をすべてスキップ" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "タイマー" }),
+    ).toBeInTheDocument();
+    expect(useResultFlowStore.getState().status).toBe("idle");
+    expect(resultFlowMocks.saveFinalizedSession).toHaveBeenCalledOnce();
   });
 });

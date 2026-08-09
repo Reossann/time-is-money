@@ -1,10 +1,11 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RESULT_FLOW_STEPS } from "../../constants/resultFlow";
 import { useResultFlowStore } from "../../stores/useResultFlowStore";
 import { RESULT_FLOW_PREVIEW_CONTENT } from "../../test/fixtures/resultFlowPreview";
+import { validSessionResult } from "../../test/fixtures/sessionResult";
 import { ResultFlow } from "./ResultFlow";
 
 describe("ResultFlow", () => {
@@ -146,5 +147,76 @@ describe("ResultFlow", () => {
         "これは開発用プレビューです。実際の金額・保存結果・設定変更は行いません。",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("renders one finalized result through the live flow", () => {
+    useResultFlowStore.getState().reset();
+    useResultFlowStore.getState().start("live");
+
+    render(<ResultFlow onExit={vi.fn()} result={validSessionResult} />);
+
+    expect(screen.getByText("今回の結果")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: RESULT_FLOW_PREVIEW_CONTENT.finalizing.title,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("saves before a live full skip exits", async () => {
+    const user = userEvent.setup();
+    const onExit = vi.fn();
+    const saveFinalizedSession = vi.fn(async () => undefined);
+    useResultFlowStore.getState().reset();
+    useResultFlowStore.getState().start("live");
+
+    render(
+      <ResultFlow
+        onExit={onExit}
+        result={validSessionResult}
+        saveFinalizedSession={saveFinalizedSession}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "結果演出をすべてスキップ" }),
+    );
+
+    await waitFor(() => expect(saveFinalizedSession).toHaveBeenCalledOnce());
+    await waitFor(() => expect(onExit).toHaveBeenCalledOnce());
+  });
+
+  it("keeps the live flow open and retries when full-skip saving fails", async () => {
+    const user = userEvent.setup();
+    const onExit = vi.fn();
+    const saveFinalizedSession = vi
+      .fn<() => Promise<unknown>>()
+      .mockRejectedValueOnce(new Error("save failed"))
+      .mockResolvedValueOnce(undefined);
+    useResultFlowStore.getState().reset();
+    useResultFlowStore.getState().start("live");
+
+    render(
+      <ResultFlow
+        onExit={onExit}
+        result={validSessionResult}
+        saveFinalizedSession={saveFinalizedSession}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "結果演出をすべてスキップ" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "保存できなかったため、結果を終了していません。",
+    );
+    expect(onExit).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: "保存して終了を再試行" }),
+    );
+    await waitFor(() => expect(saveFinalizedSession).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onExit).toHaveBeenCalledOnce());
   });
 });
