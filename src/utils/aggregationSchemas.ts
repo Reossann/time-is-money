@@ -14,14 +14,22 @@ const utcIsoTimestampSchema = z
     message: "timestamp must use UTC Z suffix",
   });
 
+export function isSupportedTimeZone(value: string): boolean {
+  if (value.trim().length === 0) return false;
+  try {
+    Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const timeZoneIdSchema = z.string().superRefine((value, context) => {
   if (value.trim().length === 0) {
     context.addIssue({ code: "custom", message: "timeZoneId must not be empty" });
     return;
   }
-  try {
-    Intl.DateTimeFormat("en-US", { timeZone: value });
-  } catch {
+  if (!isSupportedTimeZone(value)) {
     context.addIssue({ code: "custom", message: "timeZoneId must be supported" });
   }
 });
