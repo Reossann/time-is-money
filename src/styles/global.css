@@ -8,8 +8,8 @@
   --text-muted: #5d687d;
   --text-inverse: #f5f7fb;
   --border: rgba(23, 32, 51, 0.12);
-  --accent: #1f6feb;
-  --accent-soft: rgba(31, 111, 235, 0.12);
+  --accent: #b88600;
+  --accent-soft: rgba(240, 196, 25, 0.18);
 }
 
 * {
@@ -53,11 +53,18 @@ button {
 }
 
 .sidebar {
+  --sidebar-gray-dark: #292b2f;
+  --sidebar-gray-light: #36383d;
+  --sidebar-yellow: #f0c419;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
   padding: 32px 24px;
   background: linear-gradient(
     180deg,
-    rgba(18, 24, 38, 0.98),
-    rgba(18, 24, 38, 0.94)
+    var(--sidebar-gray-light),
+    var(--sidebar-gray-dark)
   );
   color: var(--text-inverse);
 }
@@ -124,7 +131,7 @@ button {
 }
 
 .sidebar__item--active .sidebar__item-icon {
-  color: var(--accent);
+  color: var(--sidebar-yellow);
 }
 
 .sidebar__item-content {
@@ -248,8 +255,8 @@ button {
   justify-self: start;
   padding: 6px 10px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent) !important;
+  background: #f0c419;
+  color: #292b2f !important;
   font-size: 0.88rem;
   font-weight: 700;
 }
@@ -294,11 +301,11 @@ button {
 
 .hourly-rate-settings__save-button {
   justify-self: start;
-  border: 1px solid var(--accent);
+  border: 1px solid #d1a500;
   border-radius: 12px;
   padding: 10px 16px;
-  background: var(--accent);
-  color: white;
+  background: #f0c419;
+  color: #292b2f;
   font-weight: 700;
 }
 
@@ -394,9 +401,9 @@ button {
 }
 
 .hourly-rate-settings__candidate button:first-child {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: white;
+  border-color: #d1a500;
+  background: #f0c419;
+  color: #292b2f;
 }
 
 .hourly-rate-settings__registered-apps {
@@ -430,8 +437,8 @@ button {
   justify-self: start;
   padding: 6px 10px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent) !important;
+  background: #f0c419;
+  color: #292b2f !important;
   font-size: 0.88rem;
   font-weight: 700;
 }
@@ -452,9 +459,9 @@ button {
 }
 
 .hourly-rate-settings__app-actions button:first-child {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: white;
+  border-color: #d1a500;
+  background: #f0c419;
+  color: #292b2f;
 }
 
 .hourly-rate-settings__app-actions button:disabled {

@@ -120,8 +120,8 @@ export function SettingsPage() {
                       padding: '8px 12px',
                       borderRadius: '999px',
                       border: '1px solid #888',
-                      backgroundColor: isActive ? '#2563eb' : '#fff',
-                      color: isActive ? '#fff' : '#111',
+                      backgroundColor: isActive ? '#f0c419' : '#fff',
+                      color: isActive ? '#292b2f' : '#111',
                       cursor: 'pointer',
                     }}
                   >
@@ -146,8 +146,8 @@ export function SettingsPage() {
                       padding: '8px 12px',
                       borderRadius: '999px',
                       border: '1px solid #888',
-                      backgroundColor: isActive ? '#2563eb' : '#fff',
-                      color: isActive ? '#fff' : '#111',
+                      backgroundColor: isActive ? '#f0c419' : '#fff',
+                      color: isActive ? '#292b2f' : '#111',
                       cursor: 'pointer',
                     }}
                   >
