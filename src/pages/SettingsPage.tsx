@@ -6,6 +6,7 @@ import {
 } from '@tauri-apps/plugin-autostart';
 import { HourlyRateSettingsSection } from '../components/settings/HourlyRateSettingsSection';
 import { AppCategorySettingsSection } from '../components/settings/AppCategorySettingsSection';
+import { AppUsageLimitSettingsSection } from '../components/settings/AppUsageLimitSettingsSection';
 import { createDefaultSettings, loadSettings, saveSettings } from '../services/settingsService';
 import type { AppSettings, NotificationIntervalMinutes, NotificationTone } from '../types/settings';
 import { getNotificationPermissionState, notificationPermissionGuideMessage, requestNotificationPermission, type NotificationPermissionState } from '../services/notificationPermissionService';
@@ -104,6 +105,7 @@ export function SettingsPage() {
 
       <HourlyRateSettingsSection />
       <AppCategorySettingsSection />
+      <AppUsageLimitSettingsSection />
 
       <section>
         <h3>通知設定</h3>
