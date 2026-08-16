@@ -1,12 +1,14 @@
 import { useCallback, useEffect } from "react";
 
 import {
+  getSavedSessionRecord,
   removeSavedSessionRecord,
   retrySaveFinalizedSessionRecord,
   saveFinalizedSessionRecordOnce,
 } from "../services/sessionRecordPersistenceController";
 import { useSessionRecordSaveStore } from "../stores/useSessionRecordSaveStore";
 import type {
+  SessionRecord,
   SessionRecordSaveErrorCode,
   SessionRecordSaveStatus,
 } from "../types/sessionRecord";
@@ -15,6 +17,7 @@ export type UseSessionRecordPersistence = Readonly<{
   status: SessionRecordSaveStatus;
   errorCode: SessionRecordSaveErrorCode | null;
   savedSessionId: string | null;
+  savedRecord: SessionRecord | null;
   retry: () => void;
   remove: () => void;
 }>;
@@ -32,6 +35,7 @@ export function useSessionRecordPersistence(): UseSessionRecordPersistence {
   const savedSessionId = useSessionRecordSaveStore(
     (state) => state.savedSessionId,
   );
+  const savedRecord = status === "saved" ? getSavedSessionRecord() : null;
 
   useEffect(() => {
     void saveFinalizedSessionRecordOnce().catch(() => {
@@ -47,5 +51,5 @@ export function useSessionRecordPersistence(): UseSessionRecordPersistence {
     void removeSavedSessionRecord().catch(() => {});
   }, []);
 
-  return { status, errorCode, savedSessionId, retry, remove } as const;
+  return { status, errorCode, savedSessionId, savedRecord, retry, remove } as const;
 }

@@ -5,25 +5,28 @@ const mocks = vi.hoisted(() => ({
   saveOnce: vi.fn(async () => {}),
   retrySave: vi.fn(async () => {}),
   removeSaved: vi.fn(async () => {}),
+  getSaved: vi.fn(() => null),
 }));
 
 vi.mock("../services/sessionRecordPersistenceController", () => ({
   saveFinalizedSessionRecordOnce: mocks.saveOnce,
   retrySaveFinalizedSessionRecord: mocks.retrySave,
   removeSavedSessionRecord: mocks.removeSaved,
+  getSavedSessionRecord: mocks.getSaved,
 }));
 
 import { useSessionRecordSaveStore } from "../stores/useSessionRecordSaveStore";
 import { useSessionRecordPersistence } from "./useSessionRecordPersistence";
 
 function Probe() {
-  const { status, errorCode, savedSessionId, retry, remove } =
+  const { status, errorCode, savedSessionId, savedRecord, retry, remove } =
     useSessionRecordPersistence();
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="error">{errorCode ?? "none"}</span>
       <span data-testid="saved">{savedSessionId ?? "none"}</span>
+      <span data-testid="record">{savedRecord?.sessionId ?? "none"}</span>
       <button type="button" onClick={retry}>
         retry
       </button>
@@ -40,6 +43,7 @@ describe("useSessionRecordPersistence", () => {
     mocks.saveOnce.mockClear();
     mocks.retrySave.mockClear();
     mocks.removeSaved.mockClear();
+    mocks.getSaved.mockClear();
   });
 
   afterEach(() => {
@@ -61,6 +65,7 @@ describe("useSessionRecordPersistence", () => {
 
     expect(screen.getByTestId("status")).toHaveTextContent("saved");
     expect(screen.getByTestId("saved")).toHaveTextContent("session-1");
+    expect(mocks.getSaved).toHaveBeenCalled();
   });
 
   it("surfaces the failure error code", () => {
