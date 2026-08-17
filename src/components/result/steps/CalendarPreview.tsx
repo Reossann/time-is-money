@@ -28,20 +28,24 @@ function getCalendarParts(localDateKey: string) {
 
 export type CalendarPreviewProps = Readonly<{
   record: SessionRecord;
+  records?: ReadonlyArray<SessionRecord>;
+  currentDateKey?: string;
 }>;
 
-export function CalendarPreview({ record }: CalendarPreviewProps) {
-  const { year, month, day, cells } = getCalendarParts(record.localDateKey);
+export function CalendarPreview({ record, records = [record], currentDateKey = record.localDateKey }: CalendarPreviewProps) {
+  const { year, month, day, cells } = getCalendarParts(currentDateKey);
+  const recordsByDay = new Map(records.map((item) => [item.localDateKey, item]));
+  const detailRecord = recordsByDay.get(currentDateKey) ?? records[records.length - 1] ?? record;
 
   return (
     <section className="calendar-preview" aria-labelledby="calendar-preview-title">
       <div className="calendar-preview__summary">
         <strong>{year}年 {month}月</strong>
         <dl>
-          <div><dt>利用時間</dt><dd>{formatDuration(record.durationSeconds)}</dd></div>
-          <div><dt>獲得</dt><dd className="calendar-preview__earned">{formatYen(record.totals.earnedYen)}</dd></div>
-          <div><dt>浪費</dt><dd className="calendar-preview__wasted">{formatYen(-record.totals.wastedYen)}</dd></div>
-          <div><dt>純増減</dt><dd className="calendar-preview__net">{formatYen(record.totals.netYen)}</dd></div>
+          <div><dt>利用時間</dt><dd>{formatDuration(records.reduce((sum, item) => sum + item.durationSeconds, 0))}</dd></div>
+          <div><dt>獲得</dt><dd className="calendar-preview__earned">{formatYen(records.reduce((sum, item) => sum + item.totals.earnedYen, 0))}</dd></div>
+          <div><dt>浪費</dt><dd className="calendar-preview__wasted">{formatYen(-records.reduce((sum, item) => sum + item.totals.wastedYen, 0))}</dd></div>
+          <div><dt>純増減</dt><dd className="calendar-preview__net">{formatYen(records.reduce((sum, item) => sum + item.totals.netYen, 0))}</dd></div>
         </dl>
       </div>
 
@@ -53,6 +57,7 @@ export function CalendarPreview({ record }: CalendarPreviewProps) {
           </div>
           <div className="calendar-preview__grid">
             {cells.map((cell, index) => {
+              const cellRecord = cell === null ? undefined : recordsByDay.get(`${year}-${String(month).padStart(2, "0")}-${String(cell).padStart(2, "0")}`);
               const selected = cell === day;
               return (
                 <div
@@ -62,12 +67,16 @@ export function CalendarPreview({ record }: CalendarPreviewProps) {
                   {cell === null ? null : (
                     <>
                       <span className="calendar-preview__cell-date">{cell}</span>
-                      {selected ? (
+                      {cellRecord ? (
                         <span className="calendar-preview__cell-values">
-                          <strong>{formatDuration(record.durationSeconds)}</strong>
-                          <span className="calendar-preview__earned">{formatYen(record.totals.earnedYen)}</span>
-                          <span className="calendar-preview__wasted">{formatYen(-record.totals.wastedYen)}</span>
-                          <span className="calendar-preview__net">{formatYen(record.totals.netYen)}</span>
+                          {selected ? (
+                            <>
+                              <strong>{formatDuration(cellRecord.durationSeconds)}</strong>
+                              <span className="calendar-preview__earned">{formatYen(cellRecord.totals.earnedYen)}</span>
+                              <span className="calendar-preview__wasted">{formatYen(-cellRecord.totals.wastedYen)}</span>
+                              <span className="calendar-preview__net">{formatYen(cellRecord.totals.netYen)}</span>
+                            </>
+                          ) : <strong>{formatYen(cellRecord.totals.netYen)}</strong>}
                         </span>
                       ) : null}
                     </>
@@ -80,15 +89,16 @@ export function CalendarPreview({ record }: CalendarPreviewProps) {
 
         <aside className="calendar-preview__detail" aria-label={`${month}月${day}日の記録`}>
           <h3>{month}月{day}日</h3>
+          {!recordsByDay.has(currentDateKey) ? <p>この日の記録はありません。</p> : null}
           <dl className="calendar-preview__detail-summary">
-            <div><dt>利用時間</dt><dd>{formatDuration(record.durationSeconds)}</dd></div>
-            <div><dt>獲得</dt><dd className="calendar-preview__earned">{formatYen(record.totals.earnedYen)}</dd></div>
-            <div><dt>浪費</dt><dd className="calendar-preview__wasted">{formatYen(-record.totals.wastedYen)}</dd></div>
-            <div><dt>純増減</dt><dd className="calendar-preview__net">{formatYen(record.totals.netYen)}</dd></div>
+            <div><dt>利用時間</dt><dd>{formatDuration(detailRecord.durationSeconds)}</dd></div>
+            <div><dt>獲得</dt><dd className="calendar-preview__earned">{formatYen(detailRecord.totals.earnedYen)}</dd></div>
+            <div><dt>浪費</dt><dd className="calendar-preview__wasted">{formatYen(-detailRecord.totals.wastedYen)}</dd></div>
+            <div><dt>純増減</dt><dd className="calendar-preview__net">{formatYen(detailRecord.totals.netYen)}</dd></div>
           </dl>
           <h4>アプリ別の内訳</h4>
           <ul>
-            {record.apps.map((app) => (
+            {detailRecord.apps.map((app) => (
               <li key={`${app.appId}-${app.processName}`}>
                 <span>{app.processName}</span>
                 <strong>{formatDuration(app.durationSeconds)}</strong>
