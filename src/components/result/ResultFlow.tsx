@@ -19,10 +19,14 @@ import {
   type SessionMoneyStepProps,
 } from "./steps/SessionMoneyStep";
 import type { ResultStepProps } from "./steps/ResultStepPlaceholder";
+import type { SessionRecord } from "../../types/sessionRecord";
 
 type ResultFlowStepProps = ResultStepProps &
   Pick<SessionMoneyStepProps, "sessionResult" | "onAnimationComplete"> &
-  Pick<HouseEquivalentStepProps, "previewEquivalent">;
+  Pick<HouseEquivalentStepProps, "previewEquivalent"> & {
+    previewRecord?: SessionRecord;
+    previewRecords?: ReadonlyArray<SessionRecord>;
+  };
 
 const STEP_COMPONENTS: Readonly<
   Record<ResultFlowStep, ComponentType<ResultFlowStepProps>>
@@ -42,6 +46,8 @@ export type ResultFlowProps = {
   sessionResult?: SessionMoneyStepProps["sessionResult"];
   onSessionMoneyAnimationComplete?: SessionMoneyStepProps["onAnimationComplete"];
   houseEquivalentPreview?: HouseEquivalentStepProps["previewEquivalent"];
+  calendarPreviewRecord?: SessionRecord;
+  calendarPreviewRecords?: ReadonlyArray<SessionRecord>;
 };
 
 export function ResultFlow({
@@ -49,6 +55,8 @@ export function ResultFlow({
   sessionResult,
   onSessionMoneyAnimationComplete,
   houseEquivalentPreview,
+  calendarPreviewRecord,
+  calendarPreviewRecords,
 }: ResultFlowProps) {
   const status = useResultFlowStore((state) => state.status);
   const mode = useResultFlowStore((state) => state.mode);
@@ -113,6 +121,8 @@ export function ResultFlow({
             sessionResult={sessionResult}
             onAnimationComplete={reportMoneyAnimationComplete}
             previewEquivalent={houseEquivalentPreview}
+            previewRecord={calendarPreviewRecord}
+            previewRecords={calendarPreviewRecords}
           />
         </div>
         <ResultFlowControls

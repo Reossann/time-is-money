@@ -114,6 +114,23 @@ describe("CalendarSaveStep", () => {
     act(() => useSessionRecordSaveStore.getState().markSaved(savedRecord.sessionId));
 
     expect(screen.getByRole("heading", { name: "カレンダー" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "計測結果をカレンダーへ保存しました。",
+    );
+    expect(screen.getByText("Code.exe")).toBeInTheDocument();
+  });
+
+  it("renders the development preview while the step is still a placeholder", () => {
+    render(
+      <CalendarSaveStep
+        content={content}
+        status="placeholder"
+        animationSkipped={false}
+        previewRecord={savedRecord}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "カレンダー" })).toBeInTheDocument();
     expect(screen.getByText("Code.exe")).toBeInTheDocument();
   });
 
