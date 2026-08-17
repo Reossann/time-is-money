@@ -37,9 +37,16 @@ export function CalendarSavePanel({
 }: CalendarSavePanelProps) {
   return (
     <div className="calendar-save">
-      <p className="calendar-save__status" role="status">
-        {STATUS_MESSAGES[status]}
-      </p>
+      {status === "saved" ? (
+        <p className="calendar-save__status calendar-save__status--saved" role="status">
+          <span className="calendar-save__check" aria-hidden="true">✓</span>
+          <span>{STATUS_MESSAGES[status]}</span>
+        </p>
+      ) : (
+        <p className="calendar-save__status" role="status">
+          {STATUS_MESSAGES[status]}
+        </p>
+      )}
       {status === "failed" ? (
         <>
           <p className="calendar-save__error">
