@@ -1,5 +1,6 @@
 import { useSessionRecordPersistence } from "../../../hooks/useSessionRecordPersistence";
 import { CalendarSavePanel } from "./CalendarSavePanel";
+import { CalendarPreview } from "./CalendarPreview";
 import {
   ResultStepPlaceholder,
   type ResultStepProps,
@@ -14,7 +15,7 @@ const HEADING_ID = "result-step-calendar-save";
  * it never writes real records.
  */
 function CalendarSaveConnectedStep({ content }: ResultStepProps) {
-  const { status, errorCode, retry, remove } = useSessionRecordPersistence();
+  const { status, errorCode, retry, remove, savedRecord } = useSessionRecordPersistence();
 
   return (
     <section className="result-step" aria-labelledby={HEADING_ID}>
@@ -28,6 +29,9 @@ function CalendarSaveConnectedStep({ content }: ResultStepProps) {
         onRetry={retry}
         onUndo={remove}
       />
+      {status === "saved" && savedRecord !== null ? (
+        <CalendarPreview record={savedRecord} />
+      ) : null}
     </section>
   );
 }
