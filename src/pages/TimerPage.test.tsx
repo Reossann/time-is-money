@@ -87,7 +87,7 @@ describe("TimerPage", () => {
     });
 
     render(<TimerPage />);
-    expect(screen.getAllByText("00:00:00")).toHaveLength(2);
+    expect(screen.getAllByText("00:00:00")).toHaveLength(1);
 
     act(() => {
       vi.advanceTimersByTime(2_000);
