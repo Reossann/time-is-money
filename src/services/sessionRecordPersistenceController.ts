@@ -153,6 +153,11 @@ export function retrySaveFinalizedSessionRecord(): Promise<SessionRecord> {
   return saveFinalizedSessionRecordOnce();
 }
 
+/** Returns the record saved by the active result flow, when available. */
+export function getSavedSessionRecord(): SessionRecord | null {
+  return state?.savedRecord ?? null;
+}
+
 /** Undoes the just-saved record for the current session. */
 export async function removeSavedSessionRecord(): Promise<void> {
   if (state === null || state.savedRecord === null) return;

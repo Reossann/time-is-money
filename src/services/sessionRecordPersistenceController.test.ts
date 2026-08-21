@@ -10,6 +10,7 @@ import { validSessionResult } from "../test/fixtures/sessionResult";
 import type { FinalizedSessionResultState } from "./sessionFinalizationController";
 import {
   configureSessionRecordPersistenceControllerForTests,
+  getSavedSessionRecord,
   removeSavedSessionRecord,
   resetSessionRecordPersistenceControllerForTests,
   retrySaveFinalizedSessionRecord,
@@ -70,6 +71,7 @@ describe("sessionRecordPersistenceController", () => {
     expect(useSessionRecordSaveStore.getState().savedSessionId).toBe(
       validSessionResult.sessionId,
     );
+    expect(getSavedSessionRecord()).toEqual(saved);
   });
 
   it("does not write again for the same session", async () => {
@@ -195,6 +197,7 @@ describe("sessionRecordPersistenceController", () => {
       await repo.base.getBySessionId(validSessionResult.sessionId),
     ).toBeNull();
     expect(useSessionRecordSaveStore.getState().status).toBe("idle");
+    expect(getSavedSessionRecord()).toBeNull();
   });
 
   it("treats removing with nothing saved as a no-op", async () => {
