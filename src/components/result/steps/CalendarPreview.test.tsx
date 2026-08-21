@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { buildSessionRecord } from "../../../services/sessionRecordService";
@@ -45,5 +45,41 @@ describe("CalendarPreview", () => {
     expect(selectedCell).toHaveClass("calendar-preview__cell--selected");
     expect(screen.getAllByText("2時間10分")).toHaveLength(3);
     expect(document.querySelectorAll(".calendar-preview__cell-values")).toHaveLength(1);
+  });
+
+  it("shows only the empty state when the selected date has no records", () => {
+    render(
+      <CalendarPreview
+        record={record}
+        records={[record]}
+        currentDateKey="2026-08-10"
+      />,
+    );
+
+    const detail = screen.getByLabelText("8月10日の記録");
+    expect(detail).toHaveTextContent("この日の記録はありません。");
+    expect(within(detail).queryByText("Code.exe")).not.toBeInTheDocument();
+    expect(within(detail).queryByText("アプリ別の内訳")).not.toBeInTheDocument();
+  });
+
+  it("aggregates multiple sessions on the same day", () => {
+    const secondRecord = {
+      ...record,
+      sessionId: "session-2",
+      durationSeconds: 600,
+      trackedDurationSeconds: 600,
+      totals: { earnedYen: 100, wastedYen: 50, netYen: 50 },
+      apps: record.apps.map((app, index) => ({
+        ...app,
+        durationSeconds: index === 0 ? 600 : 0,
+      })),
+    };
+
+    render(<CalendarPreview record={record} records={[record, secondRecord]} />);
+
+    const detail = screen.getByLabelText("8月9日の記録");
+    expect(within(detail).getByText("2時間20分")).toBeInTheDocument();
+    expect(within(detail).getByText("+6,600円")).toBeInTheDocument();
+    expect(within(detail).getByText("−1,050円")).toBeInTheDocument();
   });
 });

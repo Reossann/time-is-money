@@ -64,7 +64,7 @@ describe("TimerPage", () => {
     expect(screen.getByText("接続済み")).toBeInTheDocument();
   });
 
-  it("updates the active duration every second", () => {
+  it("updates the active site duration without replacing the measurement timer", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_700_000_000_000);
     useWebAppStore.setState({
@@ -93,7 +93,8 @@ describe("TimerPage", () => {
       vi.advanceTimersByTime(2_000);
     });
 
-    expect(screen.getAllByText("00:00:02")).toHaveLength(1);
+    expect(screen.getAllByText("00:00:00")).toHaveLength(1);
+    expect(screen.getByText("2秒")).toBeInTheDocument();
   });
 
   it("shows the Windows app diagnostics in development", () => {

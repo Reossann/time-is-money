@@ -120,7 +120,7 @@ describe("CalendarSaveStep", () => {
     expect(screen.getByText("Code.exe")).toBeInTheDocument();
   });
 
-  it("renders the development preview while the step is still a placeholder", () => {
+  it("renders an empty state for the current development preview date without a record", () => {
     render(
       <CalendarSaveStep
         content={content}
@@ -131,7 +131,10 @@ describe("CalendarSaveStep", () => {
     );
 
     expect(screen.getByRole("heading", { name: "カレンダー" })).toBeInTheDocument();
-    expect(screen.getByText("Code.exe")).toBeInTheDocument();
+    expect(screen.getByLabelText("8月16日の記録")).toHaveTextContent(
+      "この日の記録はありません。",
+    );
+    expect(screen.queryByText("Code.exe")).not.toBeInTheDocument();
   });
 
   it("hides the preview after the saved record is reset", () => {

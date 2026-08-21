@@ -63,9 +63,7 @@ export function TimerPage({ onPreviewResultFlow }: TimerPageProps) {
     if (typeof elapsedSeconds !== "number" || elapsedSeconds < 0) {
       throw new Error("入力値は 0 以上である必要があります");
     }
-    formattedTime = formatTime(
-      activeSession ? activeSessionSeconds : elapsedSeconds,
-    );
+    formattedTime = formatTime(elapsedSeconds);
   } catch (err) {
     const errorMsg =
       err instanceof Error ? err.message : "時間のフォーマットに失敗しました。";
