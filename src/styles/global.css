@@ -440,7 +440,7 @@ button.demo-calendar__day:focus-visible { position: relative; z-index: 1; outlin
   font-size: 0.78rem;
   font-weight: 800;
 }
-.demo-calendar__day--today .demo-calendar__date { background: var(--accent); color: white; }
+.demo-calendar__day--today .demo-calendar__date { background: #f0c419; color: #fff; }
 .demo-calendar__day-data { display: grid; gap: 2px; font-size: 0.67rem; line-height: 1.25; }
 .demo-calendar__day-data strong { margin-bottom: 2px; color: var(--text); font-size: 0.74rem; }
 

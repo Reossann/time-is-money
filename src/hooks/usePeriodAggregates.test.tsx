@@ -34,8 +34,8 @@ const aggregate = {
   netYen: 1,
 };
 
-function Harness({ client, currentQuery }: { client: AggregationClient; currentQuery: AggregationQuery }) {
-  const state = usePeriodAggregates({ client, query: currentQuery });
+function Harness({ client, currentQuery, refreshKey = 0 }: { client: AggregationClient; currentQuery: AggregationQuery; refreshKey?: string | number }) {
+  const state = usePeriodAggregates({ client, query: currentQuery, refreshKey });
   return (
     <div>
       <span data-testid="status">{state.status}</span>
@@ -78,5 +78,15 @@ describe("usePeriodAggregates", () => {
     await waitFor(() => expect(screen.getByTestId("key")).toHaveTextContent("2026-08-02"));
     resolveFirst?.([aggregate]);
     await waitFor(() => expect(screen.getByTestId("key")).toHaveTextContent("2026-08-02"));
+  });
+
+  it("refetches when the refresh key changes", async () => {
+    const client: AggregationClient = {
+      getPeriodAggregates: vi.fn().mockResolvedValue([aggregate]),
+    };
+    const rendered = render(<Harness client={client} currentQuery={query} refreshKey="idle:" />);
+    await waitFor(() => expect(client.getPeriodAggregates).toHaveBeenCalledTimes(1));
+    rendered.rerender(<Harness client={client} currentQuery={query} refreshKey="saved:session-1" />);
+    await waitFor(() => expect(client.getPeriodAggregates).toHaveBeenCalledTimes(2));
   });
 });
