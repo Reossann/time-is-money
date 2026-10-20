@@ -15,6 +15,7 @@ export type PeriodAggregatesState = Readonly<{
 type UsePeriodAggregatesOptions = Readonly<{
   client: AggregationClient;
   query: AggregationQuery;
+  refreshKey?: string | number;
 }>;
 
 function safeErrorMessage(error: unknown): string {
@@ -27,6 +28,7 @@ function safeErrorMessage(error: unknown): string {
 export function usePeriodAggregates({
   client,
   query,
+  refreshKey = 0,
 }: UsePeriodAggregatesOptions): PeriodAggregatesState {
   const {
     ownerId,
@@ -82,6 +84,7 @@ export function usePeriodAggregates({
     timeZoneId,
     includeEmptyPeriods,
     retryCount,
+    refreshKey,
   ]);
 
   return { ...state, retry };

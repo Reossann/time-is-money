@@ -5,6 +5,7 @@ import { useCalendarAggregates } from "../hooks/useCalendarAggregates";
 import { aggregationClient } from "../services/aggregationClient";
 import { ownerIdentityService } from "../services/ownerIdentityService";
 import type { PeriodAggregate } from "../types/aggregation";
+import { useSessionRecordSaveStore } from "../stores/useSessionRecordSaveStore";
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 const yenFormatter = new Intl.NumberFormat("ja-JP", {
@@ -75,6 +76,8 @@ export function CalendarPage() {
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [ownerError, setOwnerError] = useState(false);
   const [ownerRetry, setOwnerRetry] = useState(0);
+  const saveStatus = useSessionRecordSaveStore((state) => state.status);
+  const savedSessionId = useSessionRecordSaveStore((state) => state.savedSessionId);
   useEffect(() => {
     setOwnerId(null);
     setOwnerError(false);
@@ -88,6 +91,7 @@ export function CalendarPage() {
     year,
     month,
     client: aggregationClient,
+    refreshKey: `${saveStatus}:${savedSessionId ?? ""}`,
   });
   const aggregatesByDate = useMemo(
     () => new Map((state.data ?? []).map((item) => [item.period.key, item])),

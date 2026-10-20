@@ -10,6 +10,7 @@ export type UseCalendarAggregatesOptions = Readonly<{
   month: number;
   timeZoneId?: string;
   client?: AggregationClient;
+  refreshKey?: string | number;
 }>;
 
 export type CalendarAggregatesState = PeriodAggregatesState & Readonly<{
@@ -33,6 +34,7 @@ export function useCalendarAggregates({
   month,
   timeZoneId = getDefaultTimeZone(),
   client = aggregationClient,
+  refreshKey = 0,
 }: UseCalendarAggregatesOptions): CalendarAggregatesState {
   const query = useMemo(() => {
     const start = { year, month, day: 1 } as const;
@@ -47,6 +49,6 @@ export function useCalendarAggregates({
     };
   }, [ownerId, year, month, timeZoneId]);
 
-  const state = usePeriodAggregates({ client, query });
+  const state = usePeriodAggregates({ client, query, refreshKey });
   return { ...state, query };
 }
