@@ -30,19 +30,21 @@ function CalendarDay({
   monthKey,
   aggregate,
   selected,
+  isToday,
   onSelect,
 }: {
   day: number;
   monthKey: string;
   aggregate?: PeriodAggregate;
   selected: boolean;
+  isToday: boolean;
   onSelect: () => void;
 }) {
   const hasRecord = aggregate !== undefined && aggregate.sessionCount > 0;
   return (
     <button
       type="button"
-      className={`demo-calendar__day${selected ? " demo-calendar__day--selected" : ""}`}
+      className={`demo-calendar__day${selected ? " demo-calendar__day--selected" : ""}${isToday ? " demo-calendar__day--today" : ""}`}
       aria-pressed={selected}
       aria-label={`${Number(monthKey.slice(5, 7))}月${day}日${hasRecord ? `、利用時間${formatDuration(aggregate.durationSeconds)}、純増減${formatYen(aggregate.netYen)}` : "、記録なし"}`}
       onClick={onSelect}
@@ -201,7 +203,8 @@ export function CalendarPage() {
                   day={day}
                   monthKey={dateKey(year, month, day)}
                   aggregate={aggregatesByDate.get(dateKey(year, month, day))}
-                  selected={selectedDateKey === dateKey(year, month, day)}
+                    selected={selectedDateKey === dateKey(year, month, day)}
+                    isToday={dateKey(year, month, day) === dateKey(today.getFullYear(), today.getMonth() + 1, today.getDate())}
                   onSelect={() => setSelectedDateKey(dateKey(year, month, day))}
                 />
               ),
